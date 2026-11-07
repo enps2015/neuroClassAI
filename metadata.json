@@ -1,0 +1,6 @@
+{
+  "name": "NeuroClass AI",
+  "description": "Plataforma Inteligente de Aprendizagem Multimodal com Tutoria Cognitiva, Rastreabilidade Documental e Quadro Didático Interativo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

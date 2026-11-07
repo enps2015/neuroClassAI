@@ -1,0 +1,6 @@
+{
+  "summary": "Plano de Implementação da Fase 1 do NeuroClass AI — Versão 2.2 final: limites configuráveis e detecção de sumário para PDFs extensos com preservação estrita de paginação original; classificação rigorosa de modelConfidenceScore como estimativa interna não científica; resiliência de persistência com quota do IndexedDB, integridade e limpeza total; mapa de pré-requisitos com grafo de dependências conceituais e diagnóstico formativo C.R.E.A.R. diferenciando ausência de evidência de desconhecimento; suite ampliada de critérios de aceitação.",
+  "updatedAt": "2026-11-06T17:33:12.527600790Z",
+  "requestFeedback": true,
+  "userFacing": true
+}
