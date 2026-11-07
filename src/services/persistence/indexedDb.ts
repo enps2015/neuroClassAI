@@ -1,5 +1,13 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { DocumentSource, LearningAnalysis, StudyNote, TutorChatMessage } from '../../types';
+import type {
+  DocumentSource,
+  LearningAnalysis,
+  StudyNote,
+  TutorChatMessage,
+  LearningSession,
+  LearningAttempt,
+  ConceptMastery,
+} from '../../types';
 
 interface NeuroClassDB extends DBSchema {
   documents: {
@@ -25,17 +33,43 @@ interface NeuroClassDB extends DBSchema {
     key: string;
     value: { id: string; blob: Blob; mimeType: string; size: number };
   };
+  /* Fase 2: Stores de Avaliação Cognitiva e C.R.E.A.R. */
+  learning_sessions: {
+    key: string; // id da sessão
+    value: LearningSession;
+    indexes: { 'by-document': string; 'by-updated': number };
+  };
+  learning_attempts: {
+    key: string; // id da tentativa
+    value: LearningAttempt;
+    indexes: {
+      'by-document': string;
+      'by-concept': string;
+      'by-session': string;
+      'by-created': number;
+    };
+  };
+  concept_mastery: {
+    key: string; // `${documentId}#${conceptId}`
+    value: ConceptMastery;
+    indexes: {
+      'by-document': string;
+      'by-concept': string;
+      'by-diagnostic-state': string;
+    };
+  };
 }
 
 const DB_NAME = 'neuroclass_ai_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Evolução de schema v1 -> v2 (Fase 2)
 
 let dbPromise: Promise<IDBPDatabase<NeuroClassDB>> | null = null;
 
 export async function getDB(): Promise<IDBPDatabase<NeuroClassDB>> {
   if (!dbPromise) {
     dbPromise = openDB<NeuroClassDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion) {
+        // v1 Stores (Preservação estrita da Fase 1)
         if (!db.objectStoreNames.contains('documents')) {
           const docStore = db.createObjectStore('documents', { keyPath: 'id' });
           docStore.createIndex('by-uploaded', 'uploadedAt');
@@ -54,6 +88,34 @@ export async function getDB(): Promise<IDBPDatabase<NeuroClassDB>> {
         }
         if (!db.objectStoreNames.contains('file_blobs')) {
           db.createObjectStore('file_blobs', { keyPath: 'id' });
+        }
+
+        // v2 Stores (Fase 2: Aprendizagem Cognitiva e Avaliação)
+        if (oldVersion < 2 || !db.objectStoreNames.contains('learning_sessions')) {
+          if (!db.objectStoreNames.contains('learning_sessions')) {
+            const sessionStore = db.createObjectStore('learning_sessions', { keyPath: 'id' });
+            sessionStore.createIndex('by-document', 'documentId');
+            sessionStore.createIndex('by-updated', 'updatedAt');
+          }
+        }
+
+        if (oldVersion < 2 || !db.objectStoreNames.contains('learning_attempts')) {
+          if (!db.objectStoreNames.contains('learning_attempts')) {
+            const attemptStore = db.createObjectStore('learning_attempts', { keyPath: 'id' });
+            attemptStore.createIndex('by-document', 'documentId');
+            attemptStore.createIndex('by-concept', 'conceptId');
+            attemptStore.createIndex('by-session', 'sessionId');
+            attemptStore.createIndex('by-created', 'createdAt');
+          }
+        }
+
+        if (oldVersion < 2 || !db.objectStoreNames.contains('concept_mastery')) {
+          if (!db.objectStoreNames.contains('concept_mastery')) {
+            const masteryStore = db.createObjectStore('concept_mastery', { keyPath: 'id' });
+            masteryStore.createIndex('by-document', 'documentId');
+            masteryStore.createIndex('by-concept', 'conceptId');
+            masteryStore.createIndex('by-diagnostic-state', 'diagnosticState');
+          }
         }
       },
     });
@@ -135,7 +197,6 @@ export async function saveDocument(
 export async function getAllUserDocuments(): Promise<DocumentSource[]> {
   const db = await getDB();
   const allDocs = await db.getAllFromIndex('documents', 'by-uploaded');
-  // Filtra estritamente apenas documentos pessoais; demos ficam isoladas em memória/catálogo
   return allDocs.filter(d => !d.isDemoMaterial).reverse();
 }
 
@@ -190,56 +251,153 @@ export async function getChatSession(documentId: string): Promise<TutorChatMessa
   return session?.messages || [];
 }
 
+/* ==========================================================================
+   MÉTODOS DA FASE 2: APRENDIZAGEM COGNITIVA E MÓDULO AGORA EU EXPLICO
+   ========================================================================== */
+
+export async function saveLearningAttempt(attempt: LearningAttempt): Promise<void> {
+  const db = await getDB();
+  await db.put('learning_attempts', attempt);
+}
+
+export async function getAttemptsByConcept(documentId: string, conceptId: string): Promise<LearningAttempt[]> {
+  const db = await getDB();
+  const allForConcept = await db.getAllFromIndex('learning_attempts', 'by-concept', conceptId);
+  return allForConcept.filter(a => a.documentId === documentId).sort((a, b) => a.createdAt - b.createdAt);
+}
+
+export async function getAttemptsBySession(sessionId: string): Promise<LearningAttempt[]> {
+  const db = await getDB();
+  const attempts = await db.getAllFromIndex('learning_attempts', 'by-session', sessionId);
+  return attempts.sort((a, b) => a.createdAt - b.createdAt);
+}
+
+export function buildMasteryKey(documentId: string, conceptId: string): string {
+  return `${documentId}#${conceptId}`;
+}
+
+export async function getConceptMastery(documentId: string, conceptId: string): Promise<ConceptMastery | undefined> {
+  const db = await getDB();
+  const key = buildMasteryKey(documentId, conceptId);
+  return db.get('concept_mastery', key);
+}
+
+export async function saveConceptMastery(mastery: ConceptMastery): Promise<void> {
+  const db = await getDB();
+  await db.put('concept_mastery', mastery);
+}
+
+export async function getAllMasteryByDocument(documentId: string): Promise<ConceptMastery[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('concept_mastery', 'by-document', documentId);
+}
+
+export async function saveLearningSession(session: LearningSession): Promise<void> {
+  const db = await getDB();
+  await db.put('learning_sessions', session);
+}
+
+export async function getLearningSession(sessionId: string): Promise<LearningSession | undefined> {
+  const db = await getDB();
+  return db.get('learning_sessions', sessionId);
+}
+
+export async function getSessionsByDocument(documentId: string): Promise<LearningSession[]> {
+  const db = await getDB();
+  const sessions = await db.getAllFromIndex('learning_sessions', 'by-document', documentId);
+  return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 /**
  * Exclusão definitiva de documento e todos os seus relacionamentos (Right to be Forgotten).
+ * Atualizado na v2 para limpar também dados cognitivos da Fase 2.
  */
 export async function deleteDocumentCompletely(documentId: string): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction(['documents', 'analyses', 'notes', 'chat_sessions', 'file_blobs'], 'readwrite');
-  
+  const tx = db.transaction(
+    [
+      'documents',
+      'analyses',
+      'notes',
+      'chat_sessions',
+      'file_blobs',
+      'learning_sessions',
+      'learning_attempts',
+      'concept_mastery',
+    ],
+    'readwrite'
+  );
+
   const doc = await tx.objectStore('documents').get(documentId);
   if (doc?.storageRef) {
     await tx.objectStore('file_blobs').delete(doc.storageRef);
   }
-  
+
   await tx.objectStore('documents').delete(documentId);
-  
+
   // Limpar análises associadas
   const analysisStore = tx.objectStore('analyses');
   const analysisKeys = await analysisStore.index('by-document').getAllKeys(documentId);
   for (const key of analysisKeys) {
     await analysisStore.delete(key);
   }
-  
+
   // Limpar notas associadas
   const notesStore = tx.objectStore('notes');
   const noteKeys = await notesStore.index('by-document').getAllKeys(documentId);
   for (const key of noteKeys) {
     await notesStore.delete(key);
   }
-  
+
   // Limpar histórico de conversa
   await tx.objectStore('chat_sessions').delete(documentId);
-  
+
+  // Limpar sessões de aprendizagem Fase 2
+  const sessionStore = tx.objectStore('learning_sessions');
+  const sessionKeys = await sessionStore.index('by-document').getAllKeys(documentId);
+  for (const key of sessionKeys) {
+    await sessionStore.delete(key);
+  }
+
+  // Limpar tentativas de aprendizagem Fase 2
+  const attemptStore = tx.objectStore('learning_attempts');
+  const attemptKeys = await attemptStore.index('by-document').getAllKeys(documentId);
+  for (const key of attemptKeys) {
+    await attemptStore.delete(key);
+  }
+
+  // Limpar maestria de conceitos Fase 2
+  const masteryStore = tx.objectStore('concept_mastery');
+  const masteryKeys = await masteryStore.index('by-document').getAllKeys(documentId);
+  for (const key of masteryKeys) {
+    await masteryStore.delete(key);
+  }
+
   await tx.done;
 }
 
 /**
- * Exporta todo o histórico de aprendizagem e notas em formato JSON para resguardo do estudante.
+ * Exporta todo o histórico de aprendizagem, avaliações e notas em formato JSON para resguardo do estudante.
  */
 export async function exportUserDataAsJson(): Promise<string> {
   const db = await getDB();
   const documents = await db.getAll('documents');
   const analyses = await db.getAll('analyses');
   const notes = await db.getAll('notes');
-  
+  const attempts = await db.getAll('learning_attempts');
+  const mastery = await db.getAll('concept_mastery');
+  const sessions = await db.getAll('learning_sessions');
+
   const exportPayload = {
     exportedAt: new Date().toISOString(),
-    version: '2.2',
+    version: '2.3',
     data: {
       documents: documents.filter(d => !d.isDemoMaterial),
       analyses,
       notes,
+      learningAttempts: attempts,
+      conceptMastery: mastery,
+      learningSessions: sessions,
     },
   };
   return JSON.stringify(exportPayload, null, 2);

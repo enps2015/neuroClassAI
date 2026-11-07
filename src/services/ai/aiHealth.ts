@@ -31,6 +31,11 @@ export class AIServiceHealth {
       state: 'healthy',
       consecutiveFailures: 0,
     },
+    gemini_evaluation: {
+      service: 'gemini_evaluation',
+      state: 'healthy',
+      consecutiveFailures: 0,
+    },
   };
 
   private static listeners: Array<(status: Record<string, ServiceHealthStatus>) => void> = [];
@@ -47,15 +52,19 @@ export class AIServiceHealth {
     this.listeners.forEach(l => l({ ...this.status }));
   }
 
-  public static getStatus(service: 'gemini_multimodal' | 'gemini_tutor'): ServiceHealthStatus {
-    return this.status[service] || {
-      service,
-      state: 'healthy',
-      consecutiveFailures: 0,
-    };
+  public static getStatus(
+    service: 'gemini_multimodal' | 'gemini_tutor' | 'gemini_evaluation'
+  ): ServiceHealthStatus {
+    return (
+      this.status[service] || {
+        service,
+        state: 'healthy',
+        consecutiveFailures: 0,
+      }
+    );
   }
 
-  public static recordSuccess(service: 'gemini_multimodal' | 'gemini_tutor') {
+  public static recordSuccess(service: 'gemini_multimodal' | 'gemini_tutor' | 'gemini_evaluation') {
     const current = this.status[service];
     if (current && (current.consecutiveFailures > 0 || current.state !== 'healthy')) {
       this.status[service] = {
@@ -67,7 +76,10 @@ export class AIServiceHealth {
     }
   }
 
-  public static recordFailure(service: 'gemini_multimodal' | 'gemini_tutor', errorMsg: string) {
+  public static recordFailure(
+    service: 'gemini_multimodal' | 'gemini_tutor' | 'gemini_evaluation',
+    errorMsg: string
+  ) {
     const current = this.status[service] || {
       service,
       state: 'healthy',
@@ -91,7 +103,7 @@ export class AIServiceHealth {
    * Executa operação com tolerância a falhas, backoff exponencial com jitter e verificação de circuit breaker.
    */
   public static async executeWithResilience<T>(
-    service: 'gemini_multimodal' | 'gemini_tutor',
+    service: 'gemini_multimodal' | 'gemini_tutor' | 'gemini_evaluation',
     operation: () => Promise<T>,
     customTimeoutMs = 50000
   ): Promise<T> {
@@ -107,7 +119,6 @@ export class AIServiceHealth {
           `O serviço de IA está em pausa temporária para proteção de cota. Tente novamente em ${remainingSec}s.`
         );
       }
-      // Transição para half-open
     }
 
     let attempt = 0;
@@ -125,14 +136,12 @@ export class AIServiceHealth {
         const isLastAttempt = attempt >= DEFAULT_CONFIG.maxRetryAttempts;
         const errMsg = err?.message || 'Falha de comunicação';
 
-        // Erros estruturais de autenticação ou cliente (4xx) não devem fazer retry
         const isClientError = errMsg.includes('400') || errMsg.includes('403') || errMsg.includes('API_KEY');
         if (isLastAttempt || isClientError) {
           this.recordFailure(service, errMsg);
           throw err;
         }
 
-        // Backoff exponencial com jitter (1s, 2s, 4s...)
         const baseDelay = Math.pow(2, attempt - 1) * 1000;
         const jitter = Math.random() * 500;
         await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));

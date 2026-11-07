@@ -9,6 +9,7 @@ interface TopBarProps {
   onOpenUpload: () => void;
   onOpenDemos: () => void;
   onOpenReport?: () => void;
+  onOpenExplain?: () => void;
   healthStatus: Record<string, ServiceHealthStatus>;
   storageUsage: { usagePercent: number; isCritical: boolean };
 }
@@ -20,6 +21,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenUpload,
   onOpenDemos,
   onOpenReport,
+  onOpenExplain,
   healthStatus,
   storageUsage,
 }) => {
@@ -74,6 +76,17 @@ export const TopBar: React.FC<TopBarProps> = ({
           <BookOpen className="w-3.5 h-3.5 text-violet-400" />
           <span>Exemplos Científicos</span>
         </button>
+
+        {onOpenExplain && (
+          <button
+            onClick={onOpenExplain}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-indigo-300 hover:text-white bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/30 rounded-lg transition-colors whitespace-nowrap shadow-sm shadow-indigo-500/10"
+            title="Explicar conceitos com próprias palavras (Método Feynman / C.R.E.A.R.)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Agora Eu Explico</span>
+          </button>
+        )}
       </div>
 
       {/* Zona 3: Ações Primárias e Estado de Resiliência */}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, HelpCircle, Layers, ShieldCheck, RefreshCw, Loader2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, HelpCircle, Layers, ShieldCheck, RefreshCw, Loader2, Sparkles } from 'lucide-react';
 import type { Concept, ConceptRelationship, LearningAnalysis, RelationshipType } from '../../types';
 
 interface BlackboardProps {
@@ -7,6 +7,7 @@ interface BlackboardProps {
   selectedConcept: Concept | null;
   onSelectConcept: (concept: Concept) => void;
   onAskTutorAboutConcept: (concept: Concept) => void;
+  onExplainConcept?: (concept: Concept) => void;
   onRegenerateGraph?: () => void;
   isRegenerating?: boolean;
 }
@@ -16,6 +17,7 @@ export const Blackboard: React.FC<BlackboardProps> = ({
   selectedConcept,
   onSelectConcept,
   onAskTutorAboutConcept,
+  onExplainConcept,
   onRegenerateGraph,
   isRegenerating = false,
 }) => {
@@ -375,13 +377,25 @@ export const Blackboard: React.FC<BlackboardProps> = ({
             )}
           </div>
 
-          <button
-            onClick={() => onAskTutorAboutConcept(selectedConcept)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-violet-600/30 transition-all shrink-0"
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>Consultar no Tutor</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {onExplainConcept && (
+              <button
+                onClick={() => onExplainConcept(selectedConcept)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-indigo-600/30 transition-all"
+                title="Explicar com suas próprias palavras para avaliação formativa (Feynman / C.R.E.A.R.)"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Agora Eu Explico</span>
+              </button>
+            )}
+            <button
+              onClick={() => onAskTutorAboutConcept(selectedConcept)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-violet-600/30 transition-all"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Consultar no Tutor</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

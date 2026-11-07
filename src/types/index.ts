@@ -1,6 +1,6 @@
 /**
- * @file Contratos de Dados do NeuroClass AI — Versão 2.2
- * Rastreabilidade epistemológica, referências polimórficas e grafo conceitual.
+ * @file Contratos de Dados do NeuroClass AI — Versão 2.3 (Fase 1 + Fase 2: Aprendizagem Cognitiva)
+ * Rastreabilidade epistemológica, referências polimórficas, grafo conceitual e avaliação formativa C.R.E.A.R.
  */
 
 export type EvidenceSourceType = 'pdf_page' | 'note_section' | 'figure' | 'table';
@@ -60,9 +60,19 @@ export type EpistemicStatus =
  */
 export type DiagnosticState =
   | 'unassessed'     // Ainda não avaliado por pergunta formativa
-  | 'confirmed_gap'  // Lacuna confirmada por resposta incorreta
-  | 'understood'     // Compreensão fundamentada
-  | 'mastered';      // Domínio com capacidade de aplicação
+  | 'confirmed_gap'  // Lacuna confirmada por resposta incorreta ou equívoco conceitual
+  | 'understood'     // Compreensão fundamentada demonstrada
+  | 'mastered';      // Domínio consolidado com capacidade de aplicação/transferência
+
+/**
+ * Níveis de Domínio Cognitivo (Fase 2).
+ * Progressão fundamentada em evidências acumuladas, não em respostas isoladas.
+ */
+export type MasteryLevel =
+  | 'recognize'   // Reconhecer: Identifica termos e definições básicas
+  | 'understand'  // Compreender: Explica o mecanismo e pré-requisitos com próprias palavras
+  | 'apply'       // Aplicar: Conecta a situações práticas, problemas ou exemplos reais
+  | 'transfer';   // Transferir: Relaciona a novos domínios, contrasta e extrapola princípios
 
 export interface Concept {
   id: string;
@@ -177,9 +187,182 @@ export interface StudyNote {
 }
 
 export interface ServiceHealthStatus {
-  service: 'gemini_multimodal' | 'gemini_tutor' | 'local_storage';
+  service: 'gemini_multimodal' | 'gemini_tutor' | 'gemini_evaluation' | 'local_storage';
   state: 'healthy' | 'degraded' | 'circuit_open';
   consecutiveFailures: number;
   lastFailureTime?: number;
   lastErrorMessage?: string;
+}
+
+/* ==========================================================================
+   CONTRATOS DA FASE 2: APRENDIZAGEM COGNITIVA E AVALIAÇÃO FORMATIVA (C.R.E.A.R.)
+   ========================================================================== */
+
+/**
+ * Rubrica multidimensional de avaliação das explicações do estudante (Marco 2A).
+ * Evita notas simplistas e decompõe a resposta em 5 dimensões cognitivas.
+ */
+export interface RubricDimension {
+  score: number; // 0.0 a 1.0 (calibração interna)
+  qualitativeStatus: string;
+  comment: string;
+}
+
+export interface ExplanationRubric {
+  conceptualPrecision: {
+    score: number;
+    qualitativeStatus: 'accurate' | 'partially_accurate' | 'inaccurate';
+    comment: string;
+  };
+  completeness: {
+    score: number;
+    qualitativeStatus: 'complete' | 'partially_complete' | 'incomplete';
+    comment: string;
+  };
+  conceptualRelationships: {
+    score: number;
+    qualitativeStatus: 'well_connected' | 'isolated' | 'confused';
+    connectedConceptIds?: string[];
+    comment: string;
+  };
+  reasoningCoherence: {
+    score: number;
+    qualitativeStatus: 'coherent' | 'fragmented' | 'contradictory';
+    comment: string;
+  };
+  knowledgeApplication: {
+    score: number;
+    qualitativeStatus: 'applied' | 'theoretical_only' | 'misapplied';
+    comment: string;
+  };
+}
+
+/**
+ * Evidência de aprendizagem observável gerada durante uma tentativa do estudante.
+ */
+export interface LearningEvidence {
+  id: string;
+  type: 'student_elaboration' | 'document_quote' | 'applied_example' | 'contrast';
+  content: string;
+  referenceEvidenceId?: string;
+  pageNumber?: number;
+  epistemicStatus: EpistemicStatus;
+}
+
+/**
+ * Feedback pedagógico estruturado, detalhado e explicável.
+ */
+export interface ExplanationFeedback {
+  summary: string;
+  understoodElements: string[];
+  incompleteElements: string[];
+  misconceptions: string[];
+  identifiedGaps: string[];
+  groundingEvidences: EvidenceReference[];
+  improvementSuggestions: string[];
+  rubric: ExplanationRubric;
+  evaluatedMasteryLevel: MasteryLevel;
+  suggestedDiagnosticState: DiagnosticState;
+}
+
+/**
+ * Tentativa individual de explicação dentro do módulo "Agora Eu Explico".
+ * Mantém rastreabilidade completa entre documento, conceito, resposta e avaliação.
+ */
+export interface LearningAttempt {
+  id: string;
+  sessionId: string;
+  documentId: string;
+  conceptId: string;
+  attemptNumber: number;
+  promptQuestion: string;
+  studentExplanation: string;
+  feedback: ExplanationFeedback;
+  createdAt: number;
+  usedPedagogicalHint?: boolean;
+}
+
+/**
+ * Registro de consolidação do domínio de um conceito pelo estudante.
+ * Acumula evidências de múltiplas tentativas ao longo do tempo.
+ */
+export interface ConceptMastery {
+  id: string; // Composto: `${documentId}#${conceptId}`
+  documentId: string;
+  conceptId: string;
+  masteryLevel: MasteryLevel;
+  diagnosticState: DiagnosticState;
+  totalAttempts: number;
+  lastAttemptAt: number;
+  historyAttemptIds: string[];
+  activeGaps: string[];
+  consolidatedEvidenceIds: string[];
+  nextReviewDue?: number; // Próxima data para revisão espaçada (Marco 2D)
+}
+
+/**
+ * Sessão de aprendizagem ativa agrupando tentativas e progresso C.R.E.A.R.
+ */
+export interface LearningSession {
+  id: string;
+  documentId: string;
+  startedAt: number;
+  updatedAt: number;
+  activeConceptId?: string;
+  sessionType: 'agora_eu_explico' | 'crear_cycle' | 'spaced_review';
+  attemptCount: number;
+  conceptsAddressed: string[];
+}
+
+/**
+ * Contratos de Requisição e Resposta para a API de Avaliação.
+ */
+export interface EvaluateExplanationRequest {
+  documentId: string;
+  documentTitle: string;
+  subject?: string;
+  concept: {
+    id: string;
+    name: string;
+    definition: string;
+    prerequisiteConceptIds?: string[];
+    evidenceReferences?: EvidenceReference[];
+  };
+  promptQuestion: string;
+  studentExplanation: string;
+  attemptNumber: number;
+  previousAttempts?: Array<{
+    attemptNumber: number;
+    studentExplanation: string;
+    feedbackSummary?: string;
+  }>;
+  documentExcerpts?: string[];
+  usedPedagogicalHint?: boolean;
+}
+
+export interface EvaluateExplanationResponse {
+  feedback: ExplanationFeedback;
+  timestamp: number;
+  modelUsed: string;
+}
+
+export interface GenerateConceptQuestionRequest {
+  documentTitle: string;
+  subject?: string;
+  concept: {
+    id: string;
+    name: string;
+    definition: string;
+    prerequisiteConceptIds?: string[];
+    evidenceReferences?: EvidenceReference[];
+  };
+  targetMasteryLevel?: MasteryLevel;
+  documentExcerpts?: string[];
+}
+
+export interface GenerateConceptQuestionResponse {
+  question: string;
+  targetedPrerequisiteIds: string[];
+  contextTip?: string;
+  timestamp: number;
 }

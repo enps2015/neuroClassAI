@@ -23,6 +23,7 @@ import { StudyNotebook } from './components/notebook/StudyNotebook';
 import { DocumentUploadModal } from './components/documents/DocumentUploadModal';
 import { DemoModal } from './components/documents/DemoModal';
 import { Phase1ReportModal } from './components/documents/Phase1ReportModal';
+import { AgoraEuExplicoModal } from './components/explanation/AgoraEuExplicoModal';
 import { BookOpen, AlertCircle, FileCheck, Brain, ArrowRight } from 'lucide-react';
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'blackboard' | 'notebook' | 'document_preview'>('blackboard');
 
   // Estado de Saúde e Armazenamento
@@ -306,6 +308,7 @@ export default function App() {
         onOpenUpload={() => setIsUploadModalOpen(true)}
         onOpenDemos={() => setIsDemoModalOpen(true)}
         onOpenReport={() => setIsReportModalOpen(true)}
+        onOpenExplain={() => setIsExplainModalOpen(true)}
         healthStatus={{ gemini_multimodal: healthStatus }}
         storageUsage={storageUsage}
       />
@@ -394,6 +397,10 @@ export default function App() {
                   setSelectedConcept(c);
                   tutorPanelRef.current?.askAboutConcept(c);
                 }}
+                onExplainConcept={(c) => {
+                  setSelectedConcept(c);
+                  setIsExplainModalOpen(true);
+                }}
                 onRegenerateGraph={!activeDocument?.isDemoMaterial ? handleRegenerateGraph : undefined}
                 isRegenerating={isAnalyzing}
               />
@@ -466,6 +473,38 @@ export default function App() {
       <Phase1ReportModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
+      />
+
+      <AgoraEuExplicoModal
+        isOpen={isExplainModalOpen}
+        onClose={() => setIsExplainModalOpen(false)}
+        document={activeDocument}
+        activeConcept={selectedConcept}
+        allConcepts={
+          analysis
+            ? [...analysis.fundamentalConcepts, ...analysis.complementaryConcepts]
+            : []
+        }
+        documentExcerpts={
+          activeDocument?.pages
+            ? activeDocument.pages.slice(0, 5).map(p => `Pág. ${p.pageNumber}: ${p.textContent.slice(0, 300)}...`)
+            : []
+        }
+        onConceptStateChanged={(conceptId, newState) => {
+          if (!analysis) return;
+          setAnalysis(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              fundamentalConcepts: prev.fundamentalConcepts.map(c =>
+                c.id === conceptId ? { ...c, diagnosticState: newState } : c
+              ),
+              complementaryConcepts: prev.complementaryConcepts.map(c =>
+                c.id === conceptId ? { ...c, diagnosticState: newState } : c
+              ),
+            };
+          });
+        }}
       />
     </div>
   );

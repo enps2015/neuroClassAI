@@ -35,12 +35,13 @@ const ai = new GoogleGenAI({
     headers: {
       'User-Agent': 'aistudio-build',
     },
+    timeout: 25000,
   },
 });
 
 // Modelos suportados com ordem de resiliência
 const PRIMARY_MODEL = 'gemini-3.8-flash';
-const FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+const FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3.5-flash-lite'];
 
 /**
  * Executa generateContent com tentativa no modelo primário e fallback automático em 503/429/timeout.
@@ -70,7 +71,8 @@ async function generateContentWithResilience(params: {
       if (status === 401 || status === 403 || msg.includes('PERMISSION_DENIED') || msg.includes('API_KEY_INVALID')) {
         throw err;
       }
-      // Se for 503 (UNAVAILABLE), 429 (RESOURCE_EXHAUSTED) ou 404 (NOT_FOUND), tenta o próximo modelo da lista
+      // Se for 503 (UNAVAILABLE), 429 (RESOURCE_EXHAUSTED), 504 (TIMEOUT) ou 404 (NOT_FOUND), tenta o próximo modelo
+      await new Promise(r => setTimeout(r, 300));
       continue;
     }
   }
@@ -113,7 +115,13 @@ app.post('/api/gemini/analyze-document', async (req, res) => {
 Sua missão é analisar exaustivamente o documento científico/educacional fornecido e extrair uma REDE CONCEITUAL RICA, PROFUNDA E DIDATICAMENTE PODEROSA.
 
 DIRETRIZES DE PROFUNDIDADE E COBERTURA ACADÊMICA:
-1. DENSIDADE CONCEITUAL EXIGIDA:
+1. IDIOMA OFICIAL RIGOROSAMENTE OBRIGATÓRIO — PORTUGUÊS DO BRASIL (PT-BR):
+   - MESMO QUE O LIVRO OU ARTIGO EM PDF ESTEJA EM INGLÊS OU OUTRO IDIOMA ESTRANGEIRO, TODA A SAÍDA ESTRUTURADA DEVE SER GERADA EM PORTUGUÊS DO BRASIL (PT-BR):
+     * 'summary': Resumo analítico detalhado em português.
+     * 'fundamentalConcepts' e 'complementaryConcepts': Nomes e definições em português (pode incluir termo técnico original entre parênteses se aplicável).
+     * 'relations': Descrição da relação sempre em português.
+     * 'diagnosticQuestions': Perguntas diagnósticas RIGOROSAMENTE em português do Brasil. JAMAIS gere perguntas ou explicações em inglês.
+2. DENSIDADE CONCEITUAL EXIGIDA:
    - Extraia entre 8 a 15 CONCEITOS FUNDAMENTAIS essenciais para a compreensão do livro/artigo.
    - Extraia entre 4 a 10 CONCEITOS COMPLEMENTARES (mecanismos, mediadores, termos técnicos secundários, estruturas de suporte).
    - Extraia entre 10 a 25 RELAÇÕES CONCEITUAIS DIRECIONADAS com rótulos semânticos claros ('causes', 'regulates', 'precedes', 'composes', 'contrasts', 'correlates') e descrições explicativas densas.
@@ -406,6 +414,7 @@ app.post('/api/gemini/tutor-chat', async (req, res) => {
 Você interage ativamente com o estudante utilizando o método socrático e o ciclo pedagógico C.R.E.A.R. (Contextualizar, Relacionar, Explicar, Aplicar, Recuperar).
 
 PERSONALIDADE E TOM DE VOZ:
+- IDIOMA RIGOROSAMENTE OBRIGATÓRIO: PORTUGUÊS DO BRASIL (PT-BR). Mesmo que o documento analisado, o conceito ou a pergunta do estudante contenham termos em inglês, responda SEMPRE em português do Brasil de forma fluida, acolhedora e natural.
 - Seja natural, envolvente, humano e motivador (NUNCA frio, robótico ou burocrático).
 - Demonstre genuíno interesse na compreensão do estudante: celebre o raciocínio dele, faça analogias visuais marcantes e incentive perguntas.
 - Formate suas respostas de maneira limpa e atraente com parágrafos bem espaçados, negrito em conceitos-chave e listas quando apropriado.
@@ -468,6 +477,323 @@ REGRAS DE CONDUTA CIENTÍFICA:
     console.error('[ERRO] /api/gemini/tutor-chat falhou:', error);
     res.status(500).json({
       error: 'Falha na comunicação com o Tutor Inteligente.',
+      details: error.message || 'Erro desconhecido',
+    });
+  }
+});
+
+/**
+ * FASE 2 — MARCO 2A: MÓDULO AGORA EU EXPLICO
+ * Endpoint de Geração de Pergunta Conceitual Aberta e Contextualizada
+ */
+app.post('/api/gemini/generate-concept-question', async (req, res) => {
+  try {
+    const { documentTitle, subject, concept, targetMasteryLevel, documentExcerpts } = req.body;
+
+    if (!concept || !concept.name || !concept.definition) {
+      res.status(400).json({ error: 'Parâmetro obrigatório ausente: concept com name e definition.' });
+      return;
+    }
+
+    const systemInstruction = `Você é o formulador pedagógico de perguntas abertas do NeuroClass AI (método C.R.E.A.R. e Técnica de Feynman).
+Sua missão é gerar UMA PERGUNTA ABERTA, PROFUNDA E INSTIGANTE que convide o estudante a EXPLICAR COM SUAS PRÓPRIAS PALAVRAS o mecanismo de um conceito científico.
+
+DIRETRIZES OBRIGATÓRIAS:
+1. IDIOMA RIGOROSAMENTE OBRIGATÓRIO — PORTUGUÊS DO BRASIL (PT-BR):
+   - MESMO QUE O CONCEITO, O TÍTULO DO DOCUMENTO, OS TRECHOS OU A ÁREA ESTEJAM EM INGLÊS OU OUTRO IDIOMA, A PERGUNTA ('question') E A DICA ('contextTip') DEVEM SER GERADAS RIGOROSAMENTE EM PORTUGUÊS DO BRASIL (PT-BR). É EXPRESSAMENTE PROIBIDO gerar perguntas em inglês ou em qualquer idioma que não seja o Português do Brasil.
+2. TÉCNICA DE FEYNMAN E INVESTIGAÇÃO DE MECANISMOS:
+   - NÃO formule perguntas de memorização rasa, verdadeiro/falso ou que possam ser respondidas apenas com sim/não.
+   - Estimule a descrição de causalidade, dinâmica funcional, relação com pré-requisitos ou aplicação prática.
+   - Exemplo excelente: "Como o influxo de cálcio no terminal pré-sináptico provoca a fusão das vesículas com a membrana e o que ocorreria com a transmissão sináptica se os canais de Ca2+ voltagem-dependentes fossem bloqueados?"
+3. DICA CONTEXTUAL FORMATIVA:
+   - Inclua uma 'contextTip' em português do Brasil encorajadora que guie o estudante sobre o que é essencial abordar sem dar spoiler da resposta completa.`;
+
+    const parts: any[] = [{ text: systemInstruction }];
+    parts.push({
+      text: `DOCUMENTO: "${documentTitle || 'Documento Científico'}" (Área: ${subject || 'Geral'})
+CONCEITO EM FOCO: "${concept.name}"
+DEFINIÇÃO OFICIAL: "${concept.definition}"
+${concept.prerequisiteConceptIds && concept.prerequisiteConceptIds.length > 0 ? `PRÉ-REQUISITOS RELEVANTES: ${concept.prerequisiteConceptIds.join(', ')}` : ''}
+${targetMasteryLevel ? `NÍVEL DE DOMÍNIO ALMEJADO: ${targetMasteryLevel}` : ''}`,
+    });
+
+    if (documentExcerpts && Array.isArray(documentExcerpts) && documentExcerpts.length > 0) {
+      parts.push({
+        text: `Trechos de referência do documento original:\n${documentExcerpts.slice(0, 4).join('\n---\n')}`,
+      });
+    }
+
+    const response = await generateContentWithResilience({
+      contents: { parts },
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            question: { type: Type.STRING },
+            targetedPrerequisiteIds: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            contextTip: { type: Type.STRING },
+          },
+          required: ['question', 'targetedPrerequisiteIds'],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text || '{}');
+    res.json({
+      question: parsed.question || `Explique com suas próprias palavras o conceito de ${concept.name} e como ele opera.`,
+      targetedPrerequisiteIds: parsed.targetedPrerequisiteIds || concept.prerequisiteConceptIds || [],
+      contextTip: parsed.contextTip || 'Lembre-se de descrever o mecanismo e suas causas.',
+      timestamp: Date.now(),
+      modelUsed: response.modelUsed,
+    });
+  } catch (error: any) {
+    console.error('[ERRO] /api/gemini/generate-concept-question falhou:', error);
+    res.status(500).json({
+      error: 'Falha ao gerar pergunta reflexiva para o conceito.',
+      details: error.message || 'Erro desconhecido',
+    });
+  }
+});
+
+/**
+ * FASE 2 — MARCO 2A: MÓDULO AGORA EU EXPLICO
+ * Endpoint de Avaliação Multidimensional e Formativa da Explicação do Estudante
+ */
+app.post('/api/gemini/evaluate-explanation', async (req, res) => {
+  try {
+    const {
+      documentId,
+      documentTitle,
+      subject,
+      concept,
+      promptQuestion,
+      studentExplanation,
+      attemptNumber,
+      previousAttempts,
+      documentExcerpts,
+      usedPedagogicalHint,
+    } = req.body;
+
+    if (!studentExplanation || !concept) {
+      res.status(400).json({
+        error: 'Parâmetros obrigatórios ausentes: studentExplanation e concept são requeridos.',
+      });
+      return;
+    }
+
+    const effectivePromptQuestion =
+      (promptQuestion && typeof promptQuestion === 'string' && promptQuestion.trim()) ||
+      `Explique detalhadamente o conceito de ${concept.name || 'em estudo'}, descrevendo seus mecanismos fundamentais.`;
+
+    const systemInstruction = `Você é o Avaliador Cognitivo de Alto Rigor Científico do NeuroClass AI (Fase 2: Aprendizagem Cognitiva e Avaliação).
+Sua missão é realizar uma AVALIAÇÃO MULTIDIMENSIONAL FORMATIVA da explicação fornecida pelo estudante sobre o conceito em foco, fundamentada estritamente no documento de referência e nos princípios do ciclo C.R.E.A.R.
+
+DIRETRIZES DE AVALIAÇÃO:
+1. IDIOMA RIGOROSAMENTE OBRIGATÓRIO — PORTUGUÊS DO BRASIL (PT-BR):
+   - MESMO QUE O CONCEITO, O TÍTULO DO DOCUMENTO, OS TRECHOS CITADOS OU A EXPLICAÇÃO CONTENHAM TERMOS EM INGLÊS, TODO O FEEDBACK ('summary', 'understoodElements', 'incompleteElements', 'misconceptions', 'identifiedGaps', 'improvementSuggestions' e os comentários da rubrica) DEVE SER REDIGIDO RIGOROSAMENTE EM PORTUGUÊS DO BRASIL (PT-BR). É EXPRESSAMENTE PROIBIDO retornar feedback em inglês.
+2. RIGOR E JUSTIÇA COGNITIVA:
+   - NUNCA invente equívocos ou lacunas se a explicação estiver correta. Reconheça com entusiasmo genuíno o que o estudante compreendeu.
+   - NUNCA atribua domínio com base em memorização superficial ou reprodução literal de chavões sem explicação dos mecanismos.
+   - Não use apenas notas numéricas: forneça feedback qualitativo analítico e formativo.
+2. RUBRICA NAS 5 DIMENSÕES OBRIGATÓRIAS (Escala 0.0 a 1.0 para calibração interna):
+   - Precisão Conceitual: Definições e terminologias científicas exatas ('accurate' | 'partially_accurate' | 'inaccurate').
+   - Completude: Cobertura dos componentes cruciais do fenômeno ('complete' | 'partially_complete' | 'incomplete').
+   - Relações Conceituais: Conexão lógica com pré-requisitos e conceitos conexos ('well_connected' | 'isolated' | 'confused').
+   - Coerência do Raciocínio: Cadeia causal clara e sem contradições ('coherent' | 'fragmented' | 'contradictory').
+   - Aplicação do Conhecimento: Uso prático, analogia válida ou exemplo contextualizado ('applied' | 'theoretical_only' | 'misapplied').
+3. COMPONENTES DO FEEDBACK DETALHADO:
+   - 'summary': Síntese encorajadora e explicativa sobre o nível demonstrado.
+   - 'understoodElements': Elementos conceituais explicados com acurácia pelo estudante.
+   - 'incompleteElements': Aspectos importantes que faltaram ou foram abordados superficialmente.
+   - 'misconceptions': Equívocos conceituais detectados, acompanhados da correção científica clara e fundamentada.
+   - 'identifiedGaps': Pré-requisitos não consolidados que precisam de retomada formativa.
+   - 'groundingEvidences': Trechos literais de referência do documento original com o número da página que comprovam a avaliação.
+   - 'improvementSuggestions': Passos práticos que o estudante pode dar na próxima tentativa para aprimorar sua explicação.
+4. DETERMINAÇÃO DO NÍVEL DE DOMÍNIO E ESTADO DIAGNÓSTICO:
+   - evaluatedMasteryLevel:
+     * 'recognize': Apenas cita termos ou definições decoradas sem detalhar o mecanismo.
+     * 'understand': Explica o mecanismo e os pré-requisitos com coerência e próprias palavras.
+     * 'apply': Conecta a casos concretos, experimentos ou impactos práticos demonstráveis.
+     * 'transfer': Conecta a outros domínios, contrasta e generaliza princípios científicos.
+   - suggestedDiagnosticState:
+     * 'confirmed_gap': Se existirem equívocos substanciais ou quebra de pré-requisito fundamental.
+     * 'understood': Se a precisão e coerência forem sólidas sem equívocos críticos.
+     * 'mastered': Se demonstrar domínio avançado com capacidade de aplicação ou transferência sem lacunas em múltiplas tentativas consolidadas.
+   - REGRA DE GOVERNANÇA PEDAGÓGICA (TENTATIVA ISOLADA E ASSISTÊNCIA):
+     * Uma resposta isolada em uma primeira tentativa NUNCA deve conceder 'mastered', mesmo que seja de alta qualidade. O domínio consolidado permanente exige consistência.
+     * Se o estudante utilizou apoio pedagógico (dica) NESTA tentativa, a autonomia foi assistida: conceda no máximo 'understood' nesta tentativa pontual.
+     * NÃO bloqueie 'mastered' permanentemente por causa de dicas em tentativas passadas: se em uma tentativa subsequente o estudante demonstrar raciocínio aprofundado, consistente e autônomo sem auxílio da dica, o status 'mastered' pode e deve ser concedido caso os critérios de completude, precisão e aplicação sejam plenamente satisfeitos.`;
+
+    const parts: any[] = [{ text: systemInstruction }];
+
+    let contextPayload = `DOCUMENTO DE ESTUDO: "${documentTitle || 'Documento Acadêmico'}" (${subject || 'Geral'})
+CONCEITO AVALIADO: "${concept.name}"
+DEFINIÇÃO OFICIAL NO MATERIAL: "${concept.definition}"
+${concept.prerequisiteConceptIds && concept.prerequisiteConceptIds.length > 0 ? `PRÉ-REQUISITOS MAPEADOS: ${concept.prerequisiteConceptIds.join(', ')}` : ''}
+
+PERGUNTA FORMULADA AO ESTUDANTE:
+"${effectivePromptQuestion}"
+
+RESPOSTA / EXPLICAÇÃO DO ESTUDANTE (Tentativa nº ${attemptNumber || 1}):
+"""
+${studentExplanation}
+"""`;
+
+    if (previousAttempts && Array.isArray(previousAttempts) && previousAttempts.length > 0) {
+      contextPayload += `\n\nHISTÓRICO DE TENTATIVAS ANTERIORES:
+${previousAttempts.map(p => `- Tentativa ${p.attemptNumber}: "${p.studentExplanation.slice(0, 150)}..." (Feedback anterior: ${p.feedbackSummary || 'Sem resumo'})`).join('\n')}`;
+    }
+
+    if (documentExcerpts && Array.isArray(documentExcerpts) && documentExcerpts.length > 0) {
+      contextPayload += `\n\nTRECHOS DO DOCUMENTO OFICIAL PARA FUNDAMENTAÇÃO:\n${documentExcerpts.slice(0, 5).join('\n---\n')}`;
+    }
+
+    if (usedPedagogicalHint) {
+      contextPayload += `\n\nREGISTRO DE APOIO PEDAGÓGICO:
+O estudante utilizou a dica de apoio pedagógico para estruturar sua resposta.
+Considere esse suporte ao avaliar o grau de autonomia demonstrado. A presença de apoio pedagógico é positiva para a construção do conhecimento, mas deve ser diferenciada de um domínio plenamente autônomo e espontâneo.`;
+    }
+
+    parts.push({ text: contextPayload });
+
+    const response = await generateContentWithResilience({
+      contents: { parts },
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING },
+            understoodElements: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            incompleteElements: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            misconceptions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            identifiedGaps: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            groundingEvidences: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  type: { type: Type.STRING },
+                  pageNumber: { type: Type.INTEGER },
+                  sectionTitle: { type: Type.STRING },
+                  figureLabel: { type: Type.STRING },
+                  excerpt: { type: Type.STRING },
+                },
+                required: ['id', 'type', 'excerpt'],
+              },
+            },
+            improvementSuggestions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            rubric: {
+              type: Type.OBJECT,
+              properties: {
+                conceptualPrecision: {
+                  type: Type.OBJECT,
+                  properties: {
+                    score: { type: Type.NUMBER },
+                    qualitativeStatus: { type: Type.STRING },
+                    comment: { type: Type.STRING },
+                  },
+                  required: ['score', 'qualitativeStatus', 'comment'],
+                },
+                completeness: {
+                  type: Type.OBJECT,
+                  properties: {
+                    score: { type: Type.NUMBER },
+                    qualitativeStatus: { type: Type.STRING },
+                    comment: { type: Type.STRING },
+                  },
+                  required: ['score', 'qualitativeStatus', 'comment'],
+                },
+                conceptualRelationships: {
+                  type: Type.OBJECT,
+                  properties: {
+                    score: { type: Type.NUMBER },
+                    qualitativeStatus: { type: Type.STRING },
+                    connectedConceptIds: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                    },
+                    comment: { type: Type.STRING },
+                  },
+                  required: ['score', 'qualitativeStatus', 'comment'],
+                },
+                reasoningCoherence: {
+                  type: Type.OBJECT,
+                  properties: {
+                    score: { type: Type.NUMBER },
+                    qualitativeStatus: { type: Type.STRING },
+                    comment: { type: Type.STRING },
+                  },
+                  required: ['score', 'qualitativeStatus', 'comment'],
+                },
+                knowledgeApplication: {
+                  type: Type.OBJECT,
+                  properties: {
+                    score: { type: Type.NUMBER },
+                    qualitativeStatus: { type: Type.STRING },
+                    comment: { type: Type.STRING },
+                  },
+                  required: ['score', 'qualitativeStatus', 'comment'],
+                },
+              },
+              required: [
+                'conceptualPrecision',
+                'completeness',
+                'conceptualRelationships',
+                'reasoningCoherence',
+                'knowledgeApplication',
+              ],
+            },
+            evaluatedMasteryLevel: { type: Type.STRING },
+            suggestedDiagnosticState: { type: Type.STRING },
+          },
+          required: [
+            'summary',
+            'understoodElements',
+            'incompleteElements',
+            'misconceptions',
+            'identifiedGaps',
+            'groundingEvidences',
+            'improvementSuggestions',
+            'rubric',
+            'evaluatedMasteryLevel',
+            'suggestedDiagnosticState',
+          ],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text || '{}');
+
+    res.json({
+      feedback: parsed,
+      timestamp: Date.now(),
+      modelUsed: response.modelUsed,
+    });
+  } catch (error: any) {
+    console.error('[ERRO] /api/gemini/evaluate-explanation falhou:', error);
+    res.status(500).json({
+      error: 'Falha durante avaliação da explicação do estudante.',
       details: error.message || 'Erro desconhecido',
     });
   }
