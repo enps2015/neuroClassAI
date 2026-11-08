@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, HelpCircle, Layers, ShieldCheck, RefreshCw, Loader2, Sparkles } from 'lucide-react';
-import type { Concept, ConceptRelationship, LearningAnalysis, RelationshipType } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { ZoomIn, ZoomOut, RotateCcw, HelpCircle, Layers, ShieldCheck, RefreshCw, Loader2, Sparkles, CheckCircle2, AlertTriangle, CircleDashed, Award } from 'lucide-react';
+import type { Concept, ConceptRelationship, LearningAnalysis, RelationshipType, ConceptMastery, DiagnosticState, MasteryLevel } from '../../types';
+import { calculateDocumentMasterySummary } from '../../services/learning/masteryEngine';
+import { getDiagnosticStateMeta, getMasteryLevelMeta } from '../../utils/pedagogicalLabels';
 
 interface BlackboardProps {
   analysis: LearningAnalysis | null;
@@ -10,6 +12,7 @@ interface BlackboardProps {
   onExplainConcept?: (concept: Concept) => void;
   onRegenerateGraph?: () => void;
   isRegenerating?: boolean;
+  masteryMap?: Record<string, ConceptMastery>;
 }
 
 export const Blackboard: React.FC<BlackboardProps> = ({
@@ -20,9 +23,27 @@ export const Blackboard: React.FC<BlackboardProps> = ({
   onExplainConcept,
   onRegenerateGraph,
   isRegenerating = false,
+  masteryMap,
 }) => {
   const [zoom, setZoom] = useState(1);
   const [activeViewMode, setActiveViewMode] = useState<'concepts' | 'prerequisites' | 'processes'>('concepts');
+
+  const allConcepts = useMemo(() => {
+    if (!analysis) return [];
+    return [
+      ...analysis.fundamentalConcepts,
+      ...analysis.complementaryConcepts,
+    ];
+  }, [analysis]);
+
+  const masterySummary = useMemo(() => {
+    if (!analysis) return null;
+    return calculateDocumentMasterySummary(
+      analysis.documentId,
+      allConcepts,
+      masteryMap || {}
+    );
+  }, [analysis, allConcepts, masteryMap]);
 
   if (!analysis) {
     return (
@@ -35,11 +56,6 @@ export const Blackboard: React.FC<BlackboardProps> = ({
       </div>
     );
   }
-
-  const allConcepts = [
-    ...analysis.fundamentalConcepts,
-    ...analysis.complementaryConcepts,
-  ];
 
   // Cálculo de posições visuais para o Grafo SVG (Layout Concéntrico em Camadas Hierárquicas)
   const nodePositions = new Map<string, { x: number; y: number }>();
@@ -160,6 +176,59 @@ export const Blackboard: React.FC<BlackboardProps> = ({
         </div>
       </div>
 
+      {/* Barra de Síntese de Domínio Cognitivo C.R.E.A.R. (Marco 2B) */}
+      {masterySummary && (
+        <div className="flex flex-wrap items-center justify-between px-4 py-2 bg-slate-900/95 border-b border-slate-800 text-xs gap-2">
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-cyan-400 flex items-center gap-1.5">
+              <Award className="w-3.5 h-3.5 text-cyan-400" />
+              Domínio Cognitivo C.R.E.A.R.
+            </span>
+            <div className="flex items-center gap-2 text-slate-300 font-mono text-[11px]">
+              <span>
+                Cobertura: <strong className="text-white">{masterySummary.coverageRatio}</strong> ({masterySummary.coveragePercent}%)
+              </span>
+              <span className="text-slate-600">·</span>
+              <span>
+                Taxa de Domínio: <strong className="text-emerald-400">{masterySummary.masteryRatio}</strong> ({masterySummary.masteryPercent}%)
+              </span>
+            </div>
+          </div>
+
+          {/* Badges de Contagem de Estados com denominadores explícitos */}
+          <div className="flex items-center gap-1.5">
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+              title="Conceitos dominados com critérios cumulativos satisfeitos"
+            >
+              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+              {masterySummary.masteredCount} Dominados
+            </span>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30"
+              title="Conceitos compreendidos adequadamente"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+              {masterySummary.understoodCount} Compreendidos
+            </span>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30"
+              title="Lacunas conceituais identificadas para intervenção"
+            >
+              <AlertTriangle className="w-2.5 h-2.5 text-amber-400" />
+              {masterySummary.confirmedGapCount} Lacunas
+            </span>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/15 text-slate-400 border border-slate-500/30"
+              title="Conceitos ainda não avaliados"
+            >
+              <CircleDashed className="w-2.5 h-2.5 text-slate-400" />
+              {masterySummary.unassessedCount} Não Avaliados
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Área do SVG Interativo */}
       <div className="flex-1 relative overflow-hidden bg-radial from-slate-900/60 to-slate-950 flex items-center justify-center">
         <svg
@@ -267,6 +336,15 @@ export const Blackboard: React.FC<BlackboardProps> = ({
 
             const isSelected = selectedConcept?.id === concept.id;
             const isFundamental = concept.importance === 'fundamental';
+            const mastery = masteryMap?.[concept.id];
+            const diagnosticState: DiagnosticState = mastery?.diagnosticState || concept.diagnosticState || 'unassessed';
+            const masteryLevel: MasteryLevel = mastery?.masteryLevel || 'recognize';
+
+            // Abreviação pedagógica do nível cognitivo C.R.E.A.R.
+            const levelLetter =
+              masteryLevel === 'transfer' ? 'T' :
+              masteryLevel === 'apply' ? 'A' :
+              masteryLevel === 'understand' ? 'C' : 'R';
 
             return (
               <g
@@ -277,10 +355,66 @@ export const Blackboard: React.FC<BlackboardProps> = ({
               >
                 {/* Halo de Seleção */}
                 {isSelected && (
-                  <circle r={isFundamental ? 28 : 22} fill="none" stroke="#06b6d4" strokeWidth="2" strokeDasharray="3 3" opacity={0.8} />
+                  <circle
+                    r={isFundamental ? 29 : 24}
+                    fill="none"
+                    stroke="#06b6d4"
+                    strokeWidth="2"
+                    strokeDasharray="3 3"
+                    opacity={0.9}
+                  />
                 )}
 
-                {/* Círculo do Nó */}
+                {/* Anéis Externos Diagnósticos C.R.E.A.R. (Preservando a paleta base dos nós) */}
+                {diagnosticState === 'unassessed' && (
+                  <circle
+                    r={isFundamental ? 24 : 19}
+                    fill="none"
+                    stroke="#475569"
+                    strokeWidth="1.5"
+                    strokeDasharray="3 3"
+                    opacity={0.6}
+                  />
+                )}
+                {diagnosticState === 'confirmed_gap' && (
+                  <circle
+                    r={isFundamental ? 24 : 19}
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth="2"
+                    strokeDasharray="4 2"
+                    opacity={0.95}
+                  />
+                )}
+                {diagnosticState === 'understood' && (
+                  <circle
+                    r={isFundamental ? 24 : 19}
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="2"
+                    opacity={0.9}
+                  />
+                )}
+                {diagnosticState === 'mastered' && (
+                  <>
+                    <circle
+                      r={isFundamental ? 25 : 20}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2"
+                      opacity={0.95}
+                    />
+                    <circle
+                      r={isFundamental ? 22.5 : 17.5}
+                      fill="none"
+                      stroke="#34d399"
+                      strokeWidth="1.2"
+                      opacity={0.8}
+                    />
+                  </>
+                )}
+
+                {/* Círculo Base do Nó (Fundamental vs Complementar) */}
                 <circle
                   r={isFundamental ? 20 : 16}
                   fill={isSelected ? '#0891b2' : isFundamental ? '#1e293b' : '#0f172a'}
@@ -289,7 +423,7 @@ export const Blackboard: React.FC<BlackboardProps> = ({
                   className="transition-all duration-150 group-hover:stroke-cyan-300"
                 />
 
-                {/* Ícone ou Status */}
+                {/* Símbolo do Nó */}
                 <text
                   textAnchor="middle"
                   dy="4"
@@ -301,10 +435,36 @@ export const Blackboard: React.FC<BlackboardProps> = ({
                   {isFundamental ? '★' : '•'}
                 </text>
 
+                {/* Badge Compacto de Nível Cognitivo C.R.E.A.R. */}
+                {diagnosticState !== 'unassessed' && (
+                  <g transform={`translate(${isFundamental ? 13 : 10}, -${isFundamental ? 13 : 10})`}>
+                    <circle
+                      r={6}
+                      fill={
+                        masteryLevel === 'transfer' ? '#047857' :
+                        masteryLevel === 'apply' ? '#4338ca' :
+                        masteryLevel === 'understand' ? '#1d4ed8' : '#334155'
+                      }
+                      stroke="#0f172a"
+                      strokeWidth="1"
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy="2.2"
+                      fill="#ffffff"
+                      fontSize="7.5"
+                      fontWeight="bold"
+                      className="pointer-events-none font-mono"
+                    >
+                      {levelLetter}
+                    </text>
+                  </g>
+                )}
+
                 {/* Nome do Conceito */}
                 <text
                   textAnchor="middle"
-                  dy={isFundamental ? 34 : 28}
+                  dy={isFundamental ? 35 : 29}
                   fill={isSelected ? '#38bdf8' : '#e2e8f0'}
                   fontSize="11"
                   fontWeight={isSelected ? 'bold' : '500'}
@@ -317,87 +477,139 @@ export const Blackboard: React.FC<BlackboardProps> = ({
           })}
         </svg>
 
-        {/* Legenda Explicativa do Quadro */}
-        <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-sm border border-slate-800 rounded-lg p-2.5 text-[11px] space-y-1 text-slate-300 pointer-events-none">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
-            <span>★ Conceito Fundamental</span>
+        {/* Legenda Acessível do Quadro com os 4 Estados e Níveis */}
+        <div className="absolute bottom-3 left-3 bg-slate-900/95 backdrop-blur-sm border border-slate-800 rounded-lg p-3 text-[11px] space-y-2 text-slate-300 pointer-events-none max-w-xs shadow-xl">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-1 flex items-center justify-between">
+            <span>Legenda C.R.E.A.R.</span>
+            <span className="text-[9px] font-mono text-cyan-400">Feynman</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-            <span>• Conceito Complementar</span>
+
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+              <span>★ Fundamental</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+              <span>• Complementar</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full border-2 border-emerald-400 bg-emerald-500/20"></span>
+              <span className="text-emerald-300">Dominado</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full border-2 border-blue-400 bg-blue-500/20"></span>
+              <span className="text-blue-300">Compreendido</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full border border-amber-400 border-dashed bg-amber-500/20"></span>
+              <span className="text-amber-300">Lacuna</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full border border-slate-500 border-dashed bg-transparent"></span>
+              <span className="text-slate-400">Não Avaliado</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-0.5 bg-cyan-400"></span>
-            <span>Causa / Mecanismo</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-0.5 border-t border-amber-400 border-dashed"></span>
-            <span>Pré-requisito Cognitivo</span>
+
+          <div className="pt-1.5 border-t border-slate-800 text-[9px] text-slate-400 flex items-center justify-between">
+            <span className="font-semibold text-slate-400">Níveis Cognitivos:</span>
+            <span className="font-mono text-slate-300">R: Rec · C: Comp · A: Apl · T: Trans</span>
           </div>
         </div>
       </div>
 
-      {/* Painel Inferior de Detalhes do Conceito Selecionado com Evidências */}
-      {selectedConcept && (
-        <div className="p-4 bg-slate-900/95 border-t border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1 max-w-2xl">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-cyan-400">{selectedConcept.name}</span>
-              <span className="text-slate-500 font-mono text-[10px]">·</span>
-              <span className="text-[10px] text-slate-400 capitalize">
-                {selectedConcept.importance === 'fundamental' ? 'Fundamental' : 'Complementar'}
-              </span>
-              <span className="text-slate-500 font-mono text-[10px]">·</span>
-              <div className="flex items-center gap-1 text-[10px] text-emerald-400">
-                <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                <span>
-                  {selectedConcept.epistemicStatus === 'explicitly_documented'
-                    ? 'Documentado no Material'
-                    : selectedConcept.epistemicStatus === 'synthesized'
-                    ? 'Síntese de Trechos'
-                    : 'Inferência Didática'}
+      {/* Painel Inferior de Detalhes do Conceito Selecionado com Diagnóstico e Critérios */}
+      {selectedConcept && (() => {
+        const selMastery = masteryMap?.[selectedConcept.id];
+        const selState: DiagnosticState = selMastery?.diagnosticState || selectedConcept.diagnosticState || 'unassessed';
+        const selLevel: MasteryLevel = selMastery?.masteryLevel || 'recognize';
+        const stateMeta = getDiagnosticStateMeta(selState);
+        const levelMeta = getMasteryLevelMeta(selLevel);
+
+        return (
+          <div className="p-4 bg-slate-900/95 border-t border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1.5 max-w-2xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-cyan-400">{selectedConcept.name}</span>
+                <span className="text-slate-500 font-mono text-[10px]">·</span>
+                <span className="text-[10px] text-slate-400 capitalize">
+                  {selectedConcept.importance === 'fundamental' ? 'Fundamental' : 'Complementar'}
+                </span>
+                <span className="text-slate-500 font-mono text-[10px]">·</span>
+                <div className="flex items-center gap-1 text-[10px] text-emerald-400">
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                  <span>
+                    {selectedConcept.epistemicStatus === 'explicitly_documented'
+                      ? 'Documentado no Material'
+                      : selectedConcept.epistemicStatus === 'synthesized'
+                      ? 'Síntese de Trechos'
+                      : 'Inferência Didática'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Badges de Diagnóstico e Nível Cognitivo C.R.E.A.R. */}
+              <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px]">
+                <span className="font-semibold text-slate-300">Diagnóstico:</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${stateMeta.badgeClass}`}>
+                  {stateMeta.label}
+                </span>
+                {selState !== 'unassessed' && (
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${levelMeta.badgeClass}`}>
+                    Nível: {levelMeta.label}
+                  </span>
+                )}
+                <span className="text-slate-400 text-[10.5px] italic">
+                  {selState === 'unassessed' &&
+                    '— Ainda não avaliado. Realize uma tentativa no "Agora Eu Explico" para iniciar a consolidação.'}
+                  {selState === 'confirmed_gap' &&
+                    '— Lacuna identificada. Requer nova explicação dos mecanismos causais para validar compreensão.'}
+                  {selState === 'understood' &&
+                    '— Compreensão validada. Para atingir Dominado: realize mais 1 tentativa consistente sem dica demonstrando aplicação.'}
+                  {selState === 'mastered' &&
+                    '— Domínio demonstrado em desempenho independente com aplicação prática (não comprova retenção de longo prazo).'}
                 </span>
               </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">{selectedConcept.definition}</p>
+
+              {/* Citação das Evidências Reais */}
+              {selectedConcept.evidenceReferences.length > 0 && (
+                <div className="flex items-center gap-2 text-[11px] text-slate-400 pt-0.5">
+                  <span className="font-semibold text-slate-300">Evidência:</span>
+                  {selectedConcept.evidenceReferences.map((ev, i) => (
+                    <span key={i} className="text-cyan-300 font-mono bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/40">
+                      {ev.type === 'pdf_page' && `Pág. ${(ev as any).pageNumber}`}
+                      {ev.type === 'note_section' && `Seção "${(ev as any).sectionTitle}"`}
+                      {ev.type === 'figure' && `${(ev as any).figureLabel}`}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">{selectedConcept.definition}</p>
 
-            {/* Citação das Evidências Reais */}
-            {selectedConcept.evidenceReferences.length > 0 && (
-              <div className="flex items-center gap-2 text-[11px] text-slate-400 pt-1">
-                <span className="font-semibold text-slate-300">Evidência:</span>
-                {selectedConcept.evidenceReferences.map((ev, i) => (
-                  <span key={i} className="text-cyan-300 font-mono bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/40">
-                    {ev.type === 'pdf_page' && `Pág. ${(ev as any).pageNumber}`}
-                    {ev.type === 'note_section' && `Seção "${(ev as any).sectionTitle}"`}
-                    {ev.type === 'figure' && `${(ev as any).figureLabel}`}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {onExplainConcept && (
+            <div className="flex items-center gap-2 shrink-0">
+              {onExplainConcept && (
+                <button
+                  onClick={() => onExplainConcept(selectedConcept)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-indigo-600/30 transition-all"
+                  title="Explicar com suas próprias palavras para avaliação formativa (Feynman / C.R.E.A.R.)"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Agora Eu Explico</span>
+                </button>
+              )}
               <button
-                onClick={() => onExplainConcept(selectedConcept)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-indigo-600/30 transition-all"
-                title="Explicar com suas próprias palavras para avaliação formativa (Feynman / C.R.E.A.R.)"
+                onClick={() => onAskTutorAboutConcept(selectedConcept)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-violet-600/30 transition-all"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Agora Eu Explico</span>
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>Consultar no Tutor</span>
               </button>
-            )}
-            <button
-              onClick={() => onAskTutorAboutConcept(selectedConcept)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-violet-600/30 transition-all"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Consultar no Tutor</span>
-            </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

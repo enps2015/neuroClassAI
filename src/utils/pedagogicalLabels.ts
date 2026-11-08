@@ -86,7 +86,7 @@ export const DIAGNOSTIC_STATE_MAP: Record<DiagnosticState, DiagnosticStateMeta> 
   },
   mastered: {
     label: 'Dominado',
-    description: 'Domínio consolidado por evidências acumuladas em múltiplas tentativas e aplicações práticas.',
+    description: 'Domínio demonstrado em desempenho independente consistente com aplicação prática. Não comprova retenção de longo prazo.',
     badgeClass: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
     colorClass: 'text-emerald-400',
   },

@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
+import { sanitizeConceptQuestion, sanitizeContextTip } from './src/services/ai/i18nSanitizer';
 
 dotenv.config();
 
@@ -543,12 +544,23 @@ ${targetMasteryLevel ? `NÍVEL DE DOMÍNIO ALMEJADO: ${targetMasteryLevel}` : ''
     });
 
     const parsed = JSON.parse(response.text || '{}');
+    const sanitizedQuestion = sanitizeConceptQuestion(parsed.question || '', concept.name);
+    const sanitizedTip = sanitizeContextTip(parsed.contextTip);
+
+    if (sanitizedQuestion.isFallback) {
+      console.warn(`[I18N SANITIZER] Pergunta não-PT-BR interceptada (${sanitizedQuestion.detectedLanguage}): "${parsed.question}" -> Fallback aplicado: "${sanitizedQuestion.text}"`);
+    }
+    if (sanitizedTip.isFallback && parsed.contextTip) {
+      console.warn(`[I18N SANITIZER] Dica não-PT-BR interceptada (${sanitizedTip.detectedLanguage}): "${parsed.contextTip}" -> Fallback aplicado: "${sanitizedTip.text}"`);
+    }
+
     res.json({
-      question: parsed.question || `Explique com suas próprias palavras o conceito de ${concept.name} e como ele opera.`,
+      question: sanitizedQuestion.text,
       targetedPrerequisiteIds: parsed.targetedPrerequisiteIds || concept.prerequisiteConceptIds || [],
-      contextTip: parsed.contextTip || 'Lembre-se de descrever o mecanismo e suas causas.',
+      contextTip: sanitizedTip.text,
       timestamp: Date.now(),
       modelUsed: response.modelUsed,
+      isLanguageFallback: sanitizedQuestion.isFallback || sanitizedTip.isFallback,
     });
   } catch (error: any) {
     console.error('[ERRO] /api/gemini/generate-concept-question falhou:', error);

@@ -34,6 +34,7 @@ import {
   saveConceptMastery,
   buildMasteryKey,
 } from '../../services/persistence/indexedDb';
+import { buildConsolidatedMasteryRecord } from '../../services/learning/masteryEngine';
 import {
   getMasteryLevelMeta,
   getDiagnosticStateMeta,
@@ -220,22 +221,14 @@ export const AgoraEuExplicoModal: React.FC<AgoraEuExplicoModalProps> = ({
         usedPedagogicalHint: hasViewedHint,
       };
 
-      // Atualizar / Consolidar Maestria do Conceito
-      const updatedMastery: ConceptMastery = {
-        id: buildMasteryKey(document.id, selectedConcept.id),
-        documentId: document.id,
-        conceptId: selectedConcept.id,
-        masteryLevel: feedback.evaluatedMasteryLevel,
-        diagnosticState: feedback.suggestedDiagnosticState,
-        totalAttempts: attemptNumber,
-        lastAttemptAt: Date.now(),
-        historyAttemptIds: [...(mastery?.historyAttemptIds || []), newAttempt.id],
-        activeGaps: feedback.identifiedGaps || [],
-        consolidatedEvidenceIds: [
-          ...(mastery?.consolidatedEvidenceIds || []),
-          ...feedback.groundingEvidences.map(e => e.id),
-        ],
-      };
+      // Atualizar / Consolidar Maestria do Conceito via Motor Determinístico (Marco 2B)
+      const allAttemptsForConcept = [...attempts, newAttempt];
+      const updatedMastery = buildConsolidatedMasteryRecord(
+        document.id,
+        selectedConcept.id,
+        allAttemptsForConcept,
+        mastery || undefined
+      );
 
       // Persistir no IndexedDB
       await Promise.all([
@@ -243,14 +236,14 @@ export const AgoraEuExplicoModal: React.FC<AgoraEuExplicoModalProps> = ({
         saveConceptMastery(updatedMastery),
       ]);
 
-      setAttempts(prev => [...prev, newAttempt]);
+      setAttempts(allAttemptsForConcept);
       setCurrentFeedback(feedback);
       setMastery(updatedMastery);
-      setActiveAttemptIndex(attempts.length);
+      setActiveAttemptIndex(allAttemptsForConcept.length - 1);
       setActiveTab('feedback');
 
       if (onConceptStateChanged) {
-        onConceptStateChanged(selectedConcept.id, feedback.suggestedDiagnosticState);
+        onConceptStateChanged(selectedConcept.id, updatedMastery.diagnosticState);
       }
     } catch (err: any) {
       console.error('Falha na avaliação da explicação:', err);

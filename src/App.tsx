@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Concept, DocumentSource, LearningAnalysis, StudyNote, TutorChatMessage } from './types';
+import type { Concept, DocumentSource, LearningAnalysis, StudyNote, TutorChatMessage, ConceptMastery } from './types';
 import {
   getAllUserDocuments,
   saveDocument,
@@ -12,6 +12,7 @@ import {
   saveChatSession,
   checkStorageQuota,
   exportUserDataAsJson,
+  getAllMasteryByDocument,
 } from './services/persistence/indexedDb';
 import { DEMO_MATERIALS } from './services/documents/demoMaterials';
 import { requestDocumentAnalysis } from './services/ai/aiClient';
@@ -34,6 +35,7 @@ export default function App() {
   const [selectedConcept, setSelectedConcept] = useState<Concept | null>(null);
   const [notes, setNotes] = useState<StudyNote[]>([]);
   const [chatHistory, setChatHistory] = useState<TutorChatMessage[]>([]);
+  const [masteryMap, setMasteryMap] = useState<Record<string, ConceptMastery>>({});
 
   // Modais e UI de controle
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -65,6 +67,21 @@ export default function App() {
     });
   }, []);
 
+  // Recarregar registros de domínio cognitivo C.R.E.A.R. do documento ativo
+  const reloadMastery = useCallback(async (docId: string) => {
+    if (!docId) return;
+    try {
+      const list = await getAllMasteryByDocument(docId);
+      const map: Record<string, ConceptMastery> = {};
+      for (const m of list) {
+        map[m.conceptId] = m;
+      }
+      setMasteryMap(map);
+    } catch (err) {
+      console.error('Erro ao carregar dados de domínio cognitivo:', err);
+    }
+  }, []);
+
   // Carregar documentos salvos na inicialização
   useEffect(() => {
     const initApp = async () => {
@@ -82,13 +99,14 @@ export default function App() {
           setAnalysis(firstDemo.analysis);
           setSelectedConcept(firstDemo.analysis.fundamentalConcepts[0] || null);
           setDocuments([firstDemo.document]);
+          await reloadMastery(firstDemo.document.id);
         }
       } catch (err) {
         console.error('Falha ao inicializar o banco IndexedDB:', err);
       }
     };
     initApp();
-  }, [refreshStorage]);
+  }, [refreshStorage, reloadMastery]);
 
   // Troca de Documento Ativo com isolamento completo de contexto
   const handleSelectDocument = async (doc: DocumentSource) => {
@@ -105,6 +123,7 @@ export default function App() {
       }
       setNotes([]);
       setChatHistory([]);
+      await reloadMastery(doc.id);
       return;
     }
 
@@ -121,6 +140,8 @@ export default function App() {
 
       const savedChat = await getChatSession(doc.id);
       setChatHistory(savedChat);
+
+      await reloadMastery(doc.id);
     } catch (err) {
       console.error('Erro ao alternar de documento:', err);
     }
@@ -403,6 +424,7 @@ export default function App() {
                 }}
                 onRegenerateGraph={!activeDocument?.isDemoMaterial ? handleRegenerateGraph : undefined}
                 isRegenerating={isAnalyzing}
+                masteryMap={masteryMap}
               />
             )}
 
@@ -491,6 +513,9 @@ export default function App() {
             : []
         }
         onConceptStateChanged={(conceptId, newState) => {
+          if (activeDocument) {
+            reloadMastery(activeDocument.id);
+          }
           if (!analysis) return;
           setAnalysis(prev => {
             if (!prev) return null;
