@@ -280,6 +280,62 @@ export interface LearningAttempt {
   feedback: ExplanationFeedback;
   createdAt: number;
   usedPedagogicalHint?: boolean;
+  activityType?: 'explain' | 'apply' | 'recover';
+  scenarioContext?: string;
+}
+
+/**
+ * Estágios do Ciclo Pedagógico C.R.E.A.R. (Marco 2C).
+ */
+export type CrearStage =
+  | 'contextualize' // 1. Contextualizar
+  | 'relate'        // 2. Relacionar
+  | 'explain'       // 3. Explicar (Agora Eu Explico)
+  | 'apply'         // 4. Aplicar
+  | 'recover';      // 5. Recuperar
+
+/**
+ * Estado detalhado do progresso de um estudante no Ciclo C.R.E.A.R. por conceito.
+ */
+export interface CrearCycleProgress {
+  sessionId: string;
+  documentId: string;
+  conceptId: string;
+  currentStage: CrearStage;
+  completedStages: CrearStage[];
+  stageData?: {
+    contextualize?: {
+      viewedAt: number;
+      exploredEvidenceIds?: string[];
+    };
+    relate?: {
+      exploredRelationIds?: string[];
+      completedAt: number;
+    };
+    explain?: {
+      lastAttemptId?: string;
+      masteryLevel?: MasteryLevel;
+      completedAt?: number;
+    };
+    apply?: {
+      scenarioPrompt?: string;
+      studentResponse?: string;
+      feedbackSummary?: string;
+      isApplied?: boolean;
+      attemptId?: string;
+      completedAt?: number;
+    };
+    recover?: {
+      retrievalQuestion?: string;
+      studentResponse?: string;
+      feedbackSummary?: string;
+      attemptId?: string;
+      completedAt?: number;
+    };
+  };
+  startedAt: number;
+  updatedAt: number;
+  isCompleted: boolean;
 }
 
 /**
@@ -312,6 +368,7 @@ export interface LearningSession {
   sessionType: 'agora_eu_explico' | 'crear_cycle' | 'spaced_review';
   attemptCount: number;
   conceptsAddressed: string[];
+  crearCycle?: CrearCycleProgress;
 }
 
 /**
@@ -331,6 +388,8 @@ export interface EvaluateExplanationRequest {
   promptQuestion: string;
   studentExplanation: string;
   attemptNumber: number;
+  activityType?: 'explain' | 'apply' | 'recover';
+  scenarioContext?: string;
   previousAttempts?: Array<{
     attemptNumber: number;
     studentExplanation: string;
@@ -357,6 +416,7 @@ export interface GenerateConceptQuestionRequest {
     evidenceReferences?: EvidenceReference[];
   };
   targetMasteryLevel?: MasteryLevel;
+  activityType?: 'explain' | 'apply' | 'recover';
   documentExcerpts?: string[];
 }
 

@@ -3,7 +3,14 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
-import { sanitizeConceptQuestion, sanitizeContextTip } from './src/services/ai/i18nSanitizer';
+import {
+  sanitizeConceptQuestion,
+  sanitizeContextTip,
+  sanitizeApplicationScenario,
+  sanitizeRetrievalQuestion,
+  generateDeterministicApplicationScenario,
+  generateDeterministicRetrievalQuestion,
+} from './src/services/ai/i18nSanitizer';
 
 dotenv.config();
 
@@ -489,14 +496,16 @@ REGRAS DE CONDUTA CIENTÍFICA:
  */
 app.post('/api/gemini/generate-concept-question', async (req, res) => {
   try {
-    const { documentTitle, subject, concept, targetMasteryLevel, documentExcerpts } = req.body;
+    const { documentTitle, subject, concept, targetMasteryLevel, documentExcerpts, activityType } = req.body;
 
     if (!concept || !concept.name || !concept.definition) {
       res.status(400).json({ error: 'Parâmetro obrigatório ausente: concept com name e definition.' });
       return;
     }
 
-    const systemInstruction = `Você é o formulador pedagógico de perguntas abertas do NeuroClass AI (método C.R.E.A.R. e Técnica de Feynman).
+    const currentActivity: 'explain' | 'apply' | 'recover' = activityType || 'explain';
+
+    let systemInstruction = `Você é o formulador pedagógico de perguntas abertas do NeuroClass AI (método C.R.E.A.R. e Técnica de Feynman).
 Sua missão é gerar UMA PERGUNTA ABERTA, PROFUNDA E INSTIGANTE que convide o estudante a EXPLICAR COM SUAS PRÓPRIAS PALAVRAS o mecanismo de um conceito científico.
 
 DIRETRIZES OBRIGATÓRIAS:
@@ -505,15 +514,41 @@ DIRETRIZES OBRIGATÓRIAS:
 2. TÉCNICA DE FEYNMAN E INVESTIGAÇÃO DE MECANISMOS:
    - NÃO formule perguntas de memorização rasa, verdadeiro/falso ou que possam ser respondidas apenas com sim/não.
    - Estimule a descrição de causalidade, dinâmica funcional, relação com pré-requisitos ou aplicação prática.
-   - Exemplo excelente: "Como o influxo de cálcio no terminal pré-sináptico provoca a fusão das vesículas com a membrana e o que ocorreria com a transmissão sináptica se os canais de Ca2+ voltagem-dependentes fossem bloqueados?"
 3. DICA CONTEXTUAL FORMATIVA:
    - Inclua uma 'contextTip' em português do Brasil encorajadora que guie o estudante sobre o que é essencial abordar sem dar spoiler da resposta completa.`;
+
+    if (currentActivity === 'apply') {
+      systemInstruction = `Você é o formulador pedagógico de cenários aplicados do NeuroClass AI (Fase 2: Estágio APLICAR do Ciclo C.R.E.A.R.).
+Sua missão é gerar UM PROBLEMA, CENÁRIO PRÁTICO OU SITUAÇÃO REALISTA contextualizada que exija que o estudante APLIQUE o mecanismo causal do conceito para diagnosticar, solucionar ou prognosticar o caso.
+
+DIRETRIZES OBRIGATÓRIAS:
+1. IDIOMA RIGOROSAMENTE OBRIGATÓRIO — PORTUGUÊS DO BRASIL (PT-BR):
+   - Todo o cenário ('question') e a dica ('contextTip') DEVEM ser redigidos estritamente em Português do Brasil.
+2. FOCO EM APLICAÇÃO PRÁTICA:
+   - Formule um caso clínico, experimento, perturbação no sistema ou desafio prático concreto.
+   - Exija que o estudante utilize os mecanismos de causa-efeito do conceito para propor uma solução ou análise fundamentada.
+   - Não aceite mera reprodução de definições de livro.
+3. DICA CONTEXTUAL:
+   - Forneça uma dica formativa ('contextTip') em PT-BR orientando como conectar os fatos do caso aos mecanismos teóricos.`;
+    } else if (currentActivity === 'recover') {
+      systemInstruction = `Você é o formulador pedagógico de desafios de recuperação ativa do NeuroClass AI (Fase 2: Estágio RECUPERAR do Ciclo C.R.E.A.R.).
+Sua missão é gerar UMA PERGUNTA DE RECUPERAÇÃO ATIVA que convide o estudante a EVOCAR DA MEMÓRIA, sem consultar o material, a cadeia completa de mecanismos e consequências do conceito.
+
+DIRETRIZES OBRIGATÓRIAS:
+1. IDIOMA RIGOROSAMENTE OBRIGATÓRIO — PORTUGUÊS DO BRASIL (PT-BR):
+   - Todo o texto ('question') e dica ('contextTip') deve estar em Português do Brasil.
+2. PRÁTICA DE RECUPERAÇÃO (TESTING EFFECT):
+   - Instrua explicitamente o estudante a responder de memória, explicando a sequência causal, componentes essenciais e o que ocorreria se uma etapa falhasse.
+3. DICA CONTEXTUAL:
+   - Dica encorajadora sobre como recuperar a sequência mental dos eventos.`;
+    }
 
     const parts: any[] = [{ text: systemInstruction }];
     parts.push({
       text: `DOCUMENTO: "${documentTitle || 'Documento Científico'}" (Área: ${subject || 'Geral'})
 CONCEITO EM FOCO: "${concept.name}"
 DEFINIÇÃO OFICIAL: "${concept.definition}"
+TIPO DE ATIVIDADE: ${currentActivity.toUpperCase()}
 ${concept.prerequisiteConceptIds && concept.prerequisiteConceptIds.length > 0 ? `PRÉ-REQUISITOS RELEVANTES: ${concept.prerequisiteConceptIds.join(', ')}` : ''}
 ${targetMasteryLevel ? `NÍVEL DE DOMÍNIO ALMEJADO: ${targetMasteryLevel}` : ''}`,
     });
@@ -544,11 +579,18 @@ ${targetMasteryLevel ? `NÍVEL DE DOMÍNIO ALMEJADO: ${targetMasteryLevel}` : ''
     });
 
     const parsed = JSON.parse(response.text || '{}');
-    const sanitizedQuestion = sanitizeConceptQuestion(parsed.question || '', concept.name);
+    let sanitizedQuestion: any;
+    if (currentActivity === 'apply') {
+      sanitizedQuestion = sanitizeApplicationScenario(parsed.question || '', concept.name, subject);
+    } else if (currentActivity === 'recover') {
+      sanitizedQuestion = sanitizeRetrievalQuestion(parsed.question || '', concept.name);
+    } else {
+      sanitizedQuestion = sanitizeConceptQuestion(parsed.question || '', concept.name);
+    }
     const sanitizedTip = sanitizeContextTip(parsed.contextTip);
 
     if (sanitizedQuestion.isFallback) {
-      console.warn(`[I18N SANITIZER] Pergunta não-PT-BR interceptada (${sanitizedQuestion.detectedLanguage}): "${parsed.question}" -> Fallback aplicado: "${sanitizedQuestion.text}"`);
+      console.warn(`[I18N SANITIZER] Pergunta/Cenário não-PT-BR interceptado (${sanitizedQuestion.detectedLanguage}): "${parsed.question}" -> Fallback aplicado: "${sanitizedQuestion.text}"`);
     }
     if (sanitizedTip.isFallback && parsed.contextTip) {
       console.warn(`[I18N SANITIZER] Dica não-PT-BR interceptada (${sanitizedTip.detectedLanguage}): "${parsed.contextTip}" -> Fallback aplicado: "${sanitizedTip.text}"`);
@@ -588,6 +630,8 @@ app.post('/api/gemini/evaluate-explanation', async (req, res) => {
       previousAttempts,
       documentExcerpts,
       usedPedagogicalHint,
+      activityType,
+      scenarioContext,
     } = req.body;
 
     if (!studentExplanation || !concept) {
@@ -597,12 +641,30 @@ app.post('/api/gemini/evaluate-explanation', async (req, res) => {
       return;
     }
 
+    const currentActivity: 'explain' | 'apply' | 'recover' = activityType || 'explain';
+
     const effectivePromptQuestion =
       (promptQuestion && typeof promptQuestion === 'string' && promptQuestion.trim()) ||
       `Explique detalhadamente o conceito de ${concept.name || 'em estudo'}, descrevendo seus mecanismos fundamentais.`;
 
-    const systemInstruction = `Você é o Avaliador Cognitivo de Alto Rigor Científico do NeuroClass AI (Fase 2: Aprendizagem Cognitiva e Avaliação).
-Sua missão é realizar uma AVALIAÇÃO MULTIDIMENSIONAL FORMATIVA da explicação fornecida pelo estudante sobre o conceito em foco, fundamentada estritamente no documento de referência e nos princípios do ciclo C.R.E.A.R.
+    let activityDirective = ``;
+    if (currentActivity === 'apply') {
+      activityDirective = `
+5. DIRETRIZ ESPECÍFICA PARA O ESTÁGIO 'APLICAR' (C.R.E.A.R.):
+   - O estudante deve aplicar o mecanismo do conceito ao problema prático ou cenário clínico/experimental apresentado.
+   - DISTINÇÃO CRÍTICA: Diferencie aplicação concreta e resolutiva de mera repetição da definição teórica.
+   - Se o estudante apenas repetiu termos decorados sem integrá-los à situação concreta, classifique 'knowledgeApplication' como 'theoretical_only' ou 'misapplied', mantendo nível em 'understand' ou 'recognize'.
+   - Se o estudante resolveu o caso conectando os mecanismos de causa-efeito às variáveis da situação, conceda pontuação elevada em 'knowledgeApplication' ('applied') e avalie 'evaluatedMasteryLevel' como 'apply' ou 'transfer'.`;
+    } else if (currentActivity === 'recover') {
+      activityDirective = `
+5. DIRETRIZ ESPECÍFICA PARA O ESTÁGIO 'RECUPERAR' (C.R.E.A.R.):
+   - O estudante realizou uma prática de recuperação ativa (testing effect) evocando a memória do mecanismo sem consulta direta ao documento.
+   - Avalie a completude dos elementos essenciais lembrados e a ausência de distorções causais.
+   - Aponte com precisão em 'incompleteElements' e 'identifiedGaps' quais elos da cadeia causal não foram recuperados da memória.`;
+    }
+
+    const systemInstruction = `Você é o Avaliador Cognitivo de Alto Rigor Científico do NeuroClass AI (Fase 2: Aprendizagem Cognitiva e Avaliação - Ciclo C.R.E.A.R.).
+Sua missão é realizar uma AVALIAÇÃO MULTIDIMENSIONAL FORMATIVA da resposta fornecida pelo estudante sobre o conceito em foco, fundamentada estritamente no documento de referência e nos princípios pedagógicos do ciclo C.R.E.A.R.
 
 DIRETRIZES DE AVALIAÇÃO:
 1. IDIOMA RIGOROSAMENTE OBRIGATÓRIO — PORTUGUÊS DO BRASIL (PT-BR):
@@ -638,16 +700,18 @@ DIRETRIZES DE AVALIAÇÃO:
    - REGRA DE GOVERNANÇA PEDAGÓGICA (TENTATIVA ISOLADA E ASSISTÊNCIA):
      * Uma resposta isolada em uma primeira tentativa NUNCA deve conceder 'mastered', mesmo que seja de alta qualidade. O domínio consolidado permanente exige consistência.
      * Se o estudante utilizou apoio pedagógico (dica) NESTA tentativa, a autonomia foi assistida: conceda no máximo 'understood' nesta tentativa pontual.
-     * NÃO bloqueie 'mastered' permanentemente por causa de dicas em tentativas passadas: se em uma tentativa subsequente o estudante demonstrar raciocínio aprofundado, consistente e autônomo sem auxílio da dica, o status 'mastered' pode e deve ser concedido caso os critérios de completude, precisão e aplicação sejam plenamente satisfeitos.`;
+     * NÃO bloqueie 'mastered' permanentemente por causa de dicas em tentativas passadas: se em uma tentativa subsequente o estudante demonstrar raciocínio aprofundado, consistente e autônomo sem auxílio da dica, o status 'mastered' pode e deve ser concedido caso os critérios de completude, precisão e aplicação sejam plenamente satisfeitos.${activityDirective}`;
 
     const parts: any[] = [{ text: systemInstruction }];
 
     let contextPayload = `DOCUMENTO DE ESTUDO: "${documentTitle || 'Documento Acadêmico'}" (${subject || 'Geral'})
 CONCEITO AVALIADO: "${concept.name}"
 DEFINIÇÃO OFICIAL NO MATERIAL: "${concept.definition}"
+ESTÁGIO C.R.E.A.R.: ${currentActivity.toUpperCase()}
 ${concept.prerequisiteConceptIds && concept.prerequisiteConceptIds.length > 0 ? `PRÉ-REQUISITOS MAPEADOS: ${concept.prerequisiteConceptIds.join(', ')}` : ''}
 
-PERGUNTA FORMULADA AO ESTUDANTE:
+${scenarioContext ? `CENÁRIO CONTEXTUALIZADO:\n"""\n${scenarioContext}\n"""\n` : ''}
+PERGUNTA / DESAFIO FORMULADO AO ESTUDANTE:
 "${effectivePromptQuestion}"
 
 RESPOSTA / EXPLICAÇÃO DO ESTUDANTE (Tentativa nº ${attemptNumber || 1}):

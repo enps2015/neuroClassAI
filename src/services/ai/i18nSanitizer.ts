@@ -251,3 +251,75 @@ export function sanitizeContextTip(
   };
 }
 
+/**
+ * FASE 2 — MARCO 2C: CICLO PEDAGÓGICO C.R.E.A.R.
+ * Gera cenário de aplicação prática determinístico em Português do Brasil (Estágio APLICAR).
+ */
+export function generateDeterministicApplicationScenario(conceptName: string, subject?: string): string {
+  const cleanName = conceptName.trim();
+  const domainArea = subject ? `na área de ${subject.trim()}` : 'no contexto profissional e científico';
+  return `Considere um cenário prático ${domainArea} em que o mecanismo de "${cleanName}" é desafiado por uma perturbação crítica. Como você aplicaria os princípios operacionais deste conceito para diagnosticar o problema, prever seu desfecho e propor uma intervenção fundamentada?`;
+}
+
+/**
+ * Gera pergunta de recuperação ativa determinística em Português do Brasil (Estágio RECUPERAR).
+ */
+export function generateDeterministicRetrievalQuestion(conceptName: string): string {
+  const cleanName = conceptName.trim();
+  return `Sem consultar o material ou suas anotações prévias, reconstrua de memória os passos fundamentais do mecanismo de "${cleanName}". Quais são as causas iniciais, a sequência de eventos e as consequências indispensáveis para sua ocorrência?`;
+}
+
+/**
+ * Sanitiza cenários de aplicação prática garantindo conformidade rigorosa com PT-BR.
+ */
+export function sanitizeApplicationScenario(
+  rawScenario: string,
+  conceptName: string,
+  subject?: string
+): SanitizedI18nResult {
+  const detection = detectTextLanguage(rawScenario, conceptName);
+
+  if (detection.detectedLanguage === 'pt-br') {
+    return {
+      text: rawScenario.trim(),
+      isFallback: false,
+      detectedLanguage: 'pt-br',
+      reason: detection.reason,
+    };
+  }
+
+  return {
+    text: generateDeterministicApplicationScenario(conceptName, subject),
+    isFallback: true,
+    detectedLanguage: detection.detectedLanguage,
+    reason: `Substituído por cenário determinístico de aplicação em PT-BR: ${detection.reason}`,
+  };
+}
+
+/**
+ * Sanitiza desafios de recuperação ativa garantindo conformidade rigorosa com PT-BR.
+ */
+export function sanitizeRetrievalQuestion(
+  rawQuestion: string,
+  conceptName: string
+): SanitizedI18nResult {
+  const detection = detectTextLanguage(rawQuestion, conceptName);
+
+  if (detection.detectedLanguage === 'pt-br') {
+    return {
+      text: rawQuestion.trim(),
+      isFallback: false,
+      detectedLanguage: 'pt-br',
+      reason: detection.reason,
+    };
+  }
+
+  return {
+    text: generateDeterministicRetrievalQuestion(conceptName),
+    isFallback: true,
+    detectedLanguage: detection.detectedLanguage,
+    reason: `Substituído por formulação determinística de recuperação ativa em PT-BR: ${detection.reason}`,
+  };
+}
+
+

@@ -10,6 +10,7 @@ interface TopBarProps {
   onOpenDemos: () => void;
   onOpenReport?: () => void;
   onOpenExplain?: () => void;
+  onOpenCrearCycle?: () => void;
   healthStatus: Record<string, ServiceHealthStatus>;
   storageUsage: { usagePercent: number; isCritical: boolean };
 }
@@ -22,6 +23,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenDemos,
   onOpenReport,
   onOpenExplain,
+  onOpenCrearCycle,
   healthStatus,
   storageUsage,
 }) => {
@@ -77,10 +79,21 @@ export const TopBar: React.FC<TopBarProps> = ({
           <span>Exemplos Científicos</span>
         </button>
 
+        {onOpenCrearCycle && (
+          <button
+            onClick={onOpenCrearCycle}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-cyan-300 hover:text-white bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/30 rounded-lg transition-colors whitespace-nowrap shadow-sm shadow-cyan-500/10 cursor-pointer"
+            title="Iniciar o percurso cognitivo completo C.R.E.A.R. (Contextualizar, Relacionar, Explicar, Aplicar, Recuperar)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Ciclo C.R.E.A.R.</span>
+          </button>
+        )}
+
         {onOpenExplain && (
           <button
             onClick={onOpenExplain}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-indigo-300 hover:text-white bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/30 rounded-lg transition-colors whitespace-nowrap shadow-sm shadow-indigo-500/10"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-indigo-300 hover:text-white bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/30 rounded-lg transition-colors whitespace-nowrap shadow-sm shadow-indigo-500/10 cursor-pointer"
             title="Explicar conceitos com próprias palavras (Método Feynman / C.R.E.A.R.)"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />

@@ -10,6 +10,7 @@ interface BlackboardProps {
   onSelectConcept: (concept: Concept) => void;
   onAskTutorAboutConcept: (concept: Concept) => void;
   onExplainConcept?: (concept: Concept) => void;
+  onStartCrearCycle?: (concept: Concept) => void;
   onRegenerateGraph?: () => void;
   isRegenerating?: boolean;
   masteryMap?: Record<string, ConceptMastery>;
@@ -21,6 +22,7 @@ export const Blackboard: React.FC<BlackboardProps> = ({
   onSelectConcept,
   onAskTutorAboutConcept,
   onExplainConcept,
+  onStartCrearCycle,
   onRegenerateGraph,
   isRegenerating = false,
   masteryMap,
@@ -589,10 +591,20 @@ export const Blackboard: React.FC<BlackboardProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              {onStartCrearCycle && (
+                <button
+                  onClick={() => onStartCrearCycle(selectedConcept)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-cyan-600/30 transition-all cursor-pointer"
+                  title="Iniciar o percurso cognitivo completo C.R.E.A.R. (Contextualizar, Relacionar, Explicar, Aplicar, Recuperar)"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Ciclo C.R.E.A.R.</span>
+                </button>
+              )}
               {onExplainConcept && (
                 <button
                   onClick={() => onExplainConcept(selectedConcept)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-indigo-600/30 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-indigo-600/30 transition-all cursor-pointer"
                   title="Explicar com suas próprias palavras para avaliação formativa (Feynman / C.R.E.A.R.)"
                 >
                   <Sparkles className="w-3.5 h-3.5" />

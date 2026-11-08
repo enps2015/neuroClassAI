@@ -25,6 +25,7 @@ import { DocumentUploadModal } from './components/documents/DocumentUploadModal'
 import { DemoModal } from './components/documents/DemoModal';
 import { Phase1ReportModal } from './components/documents/Phase1ReportModal';
 import { AgoraEuExplicoModal } from './components/explanation/AgoraEuExplicoModal';
+import { CrearCycleModal } from './components/crear/CrearCycleModal';
 import { BookOpen, AlertCircle, FileCheck, Brain, ArrowRight } from 'lucide-react';
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
+  const [isCrearModalOpen, setIsCrearModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'blackboard' | 'notebook' | 'document_preview'>('blackboard');
 
   // Estado de Saúde e Armazenamento
@@ -330,6 +332,7 @@ export default function App() {
         onOpenDemos={() => setIsDemoModalOpen(true)}
         onOpenReport={() => setIsReportModalOpen(true)}
         onOpenExplain={() => setIsExplainModalOpen(true)}
+        onOpenCrearCycle={() => setIsCrearModalOpen(true)}
         healthStatus={{ gemini_multimodal: healthStatus }}
         storageUsage={storageUsage}
       />
@@ -421,6 +424,10 @@ export default function App() {
                 onExplainConcept={(c) => {
                   setSelectedConcept(c);
                   setIsExplainModalOpen(true);
+                }}
+                onStartCrearCycle={(c) => {
+                  setSelectedConcept(c);
+                  setIsCrearModalOpen(true);
                 }}
                 onRegenerateGraph={!activeDocument?.isDemoMaterial ? handleRegenerateGraph : undefined}
                 isRegenerating={isAnalyzing}
@@ -526,6 +533,42 @@ export default function App() {
               ),
               complementaryConcepts: prev.complementaryConcepts.map(c =>
                 c.id === conceptId ? { ...c, diagnosticState: newState } : c
+              ),
+            };
+          });
+        }}
+      />
+
+      <CrearCycleModal
+        isOpen={isCrearModalOpen}
+        onClose={() => setIsCrearModalOpen(false)}
+        document={activeDocument}
+        concept={selectedConcept}
+        allConcepts={
+          analysis
+            ? [...analysis.fundamentalConcepts, ...analysis.complementaryConcepts]
+            : []
+        }
+        analysis={analysis}
+        documentExcerpts={
+          activeDocument?.pages
+            ? activeDocument.pages.slice(0, 5).map(p => `Pág. ${p.pageNumber}: ${p.textContent.slice(0, 300)}...`)
+            : []
+        }
+        onConceptMasteryChanged={(conceptId, updatedMastery) => {
+          if (activeDocument) {
+            reloadMastery(activeDocument.id);
+          }
+          if (!analysis) return;
+          setAnalysis(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              fundamentalConcepts: prev.fundamentalConcepts.map(c =>
+                c.id === conceptId ? { ...c, diagnosticState: updatedMastery.diagnosticState } : c
+              ),
+              complementaryConcepts: prev.complementaryConcepts.map(c =>
+                c.id === conceptId ? { ...c, diagnosticState: updatedMastery.diagnosticState } : c
               ),
             };
           });

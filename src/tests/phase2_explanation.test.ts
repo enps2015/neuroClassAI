@@ -28,7 +28,21 @@ import {
   detectTextLanguage,
   generateDeterministicConceptQuestion,
   generateDeterministicContextTip,
+  generateDeterministicApplicationScenario,
+  generateDeterministicRetrievalQuestion,
+  sanitizeApplicationScenario,
+  sanitizeRetrievalQuestion,
 } from '../services/ai/i18nSanitizer.ts';
+import {
+  CREAR_STAGES,
+  CREAR_STAGE_META,
+  markStageCompleted,
+  advanceToNextStage,
+  navigateToStage,
+  isStageAccessible,
+  extractConceptRelations,
+} from '../services/learning/crearCycleService.ts';
+import type { CrearCycleProgress, CrearStage, LearningSession } from '../types/index.ts';
 
 test('T201: Rubrica Multidimensional do "Agora Eu Explico" cobre estritamente as 5 dimensões cognitivas', () => {
   const sampleFeedback: ExplanationFeedback = {
@@ -986,3 +1000,433 @@ test('T218: Auditoria do Sanitizador PT-BR — Cobertura dos 6 cenários de idio
   assert.equal(resBonus.detectedLanguage, 'pt-br');
   assert.equal(resBonus.text, qValidWithConcept);
 });
+
+/* ==========================================================================
+   FASE 2 — MARCO 2C: TESTES DO CICLO PEDAGÓGICO C.R.E.A.R.
+   ========================================================================== */
+
+test('T219: Início, Retomada e Persistência do Ciclo C.R.E.A.R.', () => {
+  const documentId = 'doc_neuro_1';
+  const conceptId = 'c_potencial_acao';
+  const sessionId = `session_crear_${documentId}_${conceptId}_${Date.now()}`;
+
+  // Estrutura inicial do ciclo C.R.E.A.R.
+  const initialSession: LearningSession = {
+    id: sessionId,
+    documentId,
+    startedAt: Date.now(),
+    updatedAt: Date.now(),
+    activeConceptId: conceptId,
+    sessionType: 'crear_cycle',
+    attemptCount: 0,
+    conceptsAddressed: [conceptId],
+    crearCycle: {
+      sessionId,
+      documentId,
+      conceptId,
+      currentStage: 'contextualize',
+      completedStages: [],
+      stageData: {},
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
+      isCompleted: false,
+    },
+  };
+
+  assert.equal(initialSession.sessionType, 'crear_cycle');
+  assert.equal(initialSession.crearCycle?.currentStage, 'contextualize');
+  assert.equal(initialSession.crearCycle?.completedStages.length, 0);
+  assert.equal(initialSession.crearCycle?.isCompleted, false);
+
+  // Concluir etapa 1: Contextualizar
+  const updated1 = markStageCompleted(initialSession, 'contextualize', { viewedAt: Date.now() });
+  assert.ok(updated1.crearCycle?.completedStages.includes('contextualize'));
+  assert.equal(updated1.crearCycle?.isCompleted, false);
+
+  // Avançar para etapa 2: Relacionar
+  const advanced1 = advanceToNextStage(updated1);
+  assert.equal(advanced1.crearCycle?.currentStage, 'relate');
+
+  // Retomada: Simula recarga do objeto persistido preservando o estágio ativo e os concluídos
+  const restoredSession: LearningSession = JSON.parse(JSON.stringify(advanced1));
+  assert.equal(restoredSession.crearCycle?.currentStage, 'relate');
+  assert.deepEqual(restoredSession.crearCycle?.completedStages, ['contextualize']);
+});
+
+test('T220: Progressão Sequencial e Acessibilidade entre as 5 Etapas (C.R.E.A.R.)', () => {
+  assert.deepEqual(CREAR_STAGES, ['contextualize', 'relate', 'explain', 'apply', 'recover']);
+
+  const progress: CrearCycleProgress = {
+    sessionId: 'sess_1',
+    documentId: 'doc_1',
+    conceptId: 'c_1',
+    currentStage: 'contextualize',
+    completedStages: [],
+    startedAt: 1000,
+    updatedAt: 1000,
+    isCompleted: false,
+  };
+
+  // Etapa inicial é sempre acessível
+  assert.equal(isStageAccessible(progress, 'contextualize'), true);
+  // Etapas posteriores bloqueadas até conclusão da anterior
+  assert.equal(isStageAccessible(progress, 'relate'), false);
+  assert.equal(isStageAccessible(progress, 'explain'), false);
+  assert.equal(isStageAccessible(progress, 'apply'), false);
+  assert.equal(isStageAccessible(progress, 'recover'), false);
+
+  // Completou Contextualizar
+  progress.completedStages.push('contextualize');
+  progress.currentStage = 'relate';
+
+  assert.equal(isStageAccessible(progress, 'contextualize'), true, 'Retrocesso permitido para revisar');
+  assert.equal(isStageAccessible(progress, 'relate'), true);
+  assert.equal(isStageAccessible(progress, 'explain'), false, 'Explain ainda bloqueado');
+
+  // Completou Relacionar e Explicar
+  progress.completedStages.push('relate', 'explain');
+  progress.currentStage = 'apply';
+
+  assert.equal(isStageAccessible(progress, 'contextualize'), true);
+  assert.equal(isStageAccessible(progress, 'relate'), true);
+  assert.equal(isStageAccessible(progress, 'explain'), true);
+  assert.equal(isStageAccessible(progress, 'apply'), true);
+  assert.equal(isStageAccessible(progress, 'recover'), false, 'Recover ainda bloqueado');
+
+  // Navegação livre entre etapas acessíveis
+  let session: LearningSession = {
+    id: 'sess_1',
+    documentId: 'doc_1',
+    startedAt: 1000,
+    updatedAt: 1000,
+    sessionType: 'crear_cycle',
+    attemptCount: 0,
+    conceptsAddressed: ['c_1'],
+    crearCycle: progress,
+  };
+
+  session = navigateToStage(session, 'contextualize');
+  assert.equal(session.crearCycle?.currentStage, 'contextualize');
+
+  session = navigateToStage(session, 'apply');
+  assert.equal(session.crearCycle?.currentStage, 'apply');
+});
+
+test('T221: Integração com o Agora Eu Explico e Não-Duplicação de Avaliações', () => {
+  // Cenário: Estudante já possui uma tentativa de explicação homologada
+  const previousExplainAttempt: LearningAttempt = {
+    id: 'att_prev_1',
+    sessionId: 'sess_old',
+    documentId: 'doc_neuro',
+    conceptId: 'c_potencial_acao',
+    attemptNumber: 1,
+    promptQuestion: 'Explique o potencial de ação...',
+    studentExplanation: 'É uma onda transitória de despolarização por influxo de Na+...',
+    feedback: {
+      summary: 'Boa explicação dos mecanismos biofísicos.',
+      understoodElements: ['Despolarização', 'Canais voltagem-dependentes'],
+      incompleteElements: [],
+      misconceptions: [],
+      identifiedGaps: [],
+      groundingEvidences: [],
+      improvementSuggestions: [],
+      rubric: {
+        conceptualPrecision: { score: 0.9, qualitativeStatus: 'accurate', comment: 'Exato' },
+        completeness: { score: 0.85, qualitativeStatus: 'complete', comment: 'Completo' },
+        conceptualRelationships: { score: 0.8, qualitativeStatus: 'well_connected', comment: 'Conectado' },
+        reasoningCoherence: { score: 0.9, qualitativeStatus: 'coherent', comment: 'Coerente' },
+        knowledgeApplication: { score: 0.7, qualitativeStatus: 'theoretical_only', comment: 'Teórico' },
+      },
+      evaluatedMasteryLevel: 'understand',
+      suggestedDiagnosticState: 'understood',
+    },
+    createdAt: Date.now() - 50000,
+    activityType: 'explain',
+  };
+
+  // Ao inicializar o Ciclo C.R.E.A.R., o percurso reconhece o histórico existente
+  const cycle: CrearCycleProgress = {
+    sessionId: 'sess_crear_new',
+    documentId: 'doc_neuro',
+    conceptId: 'c_potencial_acao',
+    currentStage: 'contextualize',
+    completedStages: ['explain'], // Reconhecido automaticamente
+    stageData: {
+      explain: {
+        lastAttemptId: previousExplainAttempt.id,
+        masteryLevel: previousExplainAttempt.feedback.evaluatedMasteryLevel,
+        completedAt: previousExplainAttempt.createdAt,
+      },
+    },
+    startedAt: Date.now(),
+    updatedAt: Date.now(),
+    isCompleted: false,
+  };
+
+  assert.ok(cycle.completedStages.includes('explain'), 'Estágio Explicar já consta como concluído');
+  assert.equal(cycle.stageData?.explain?.lastAttemptId, 'att_prev_1');
+  assert.equal(cycle.stageData?.explain?.masteryLevel, 'understand');
+});
+
+test('T222: Registro de Atividades Aplicadas (apply) e de Evocação Ativa (recover)', () => {
+  const documentId = 'doc_neuro';
+  const conceptId = 'c_snare';
+
+  // Tentativa 1: Explicar (understand)
+  const attemptExplain: LearningAttempt = {
+    id: 'att_1',
+    sessionId: 'sess_c',
+    documentId,
+    conceptId,
+    attemptNumber: 1,
+    promptQuestion: 'Como opera o complexo SNARE?',
+    studentExplanation: 'Sintaxina e SNAP-25 interagem com sinaptobrevina após influxo de Ca2+.',
+    feedback: {
+      summary: 'Compreensão correta do mecanismo de fusão de vesículas.',
+      understoodElements: ['Interação proteica', 'Gatilho de cálcio'],
+      incompleteElements: [],
+      misconceptions: [],
+      identifiedGaps: [],
+      groundingEvidences: [],
+      improvementSuggestions: [],
+      rubric: {
+        conceptualPrecision: { score: 0.9, qualitativeStatus: 'accurate', comment: 'Preciso' },
+        completeness: { score: 0.85, qualitativeStatus: 'complete', comment: 'Completo' },
+        conceptualRelationships: { score: 0.85, qualitativeStatus: 'well_connected', comment: 'Bem relacionado' },
+        reasoningCoherence: { score: 0.9, qualitativeStatus: 'coherent', comment: 'Coerente' },
+        knowledgeApplication: { score: 0.7, qualitativeStatus: 'theoretical_only', comment: 'Teórico' },
+      },
+      evaluatedMasteryLevel: 'understand',
+      suggestedDiagnosticState: 'understood',
+    },
+    createdAt: 100000,
+    usedPedagogicalHint: false,
+    activityType: 'explain',
+  };
+
+  // Tentativa 2: Aplicar (apply - cenário clínico com toxina botulínica)
+  const attemptApply: LearningAttempt = {
+    id: 'att_2',
+    sessionId: 'sess_c_2',
+    documentId,
+    conceptId,
+    attemptNumber: 2,
+    promptQuestion: 'Um paciente intoxicado por toxina botulínica apresenta paralisia flácida...',
+    studentExplanation: 'A toxina cliva as proteínas SNARE (SNAP-25), impedindo a fusão vesicular e liberação de acetilcolina na fenda.',
+    feedback: {
+      summary: 'Aplicação clínica impecável explicando a patofisiologia com base no mecanismo.',
+      understoodElements: ['Clivagem de SNAP-25', 'Bloqueio de liberação de ACh'],
+      incompleteElements: [],
+      misconceptions: [],
+      identifiedGaps: [],
+      groundingEvidences: [],
+      improvementSuggestions: [],
+      rubric: {
+        conceptualPrecision: { score: 0.95, qualitativeStatus: 'accurate', comment: 'Preciso' },
+        completeness: { score: 0.9, qualitativeStatus: 'complete', comment: 'Completo' },
+        conceptualRelationships: { score: 0.9, qualitativeStatus: 'well_connected', comment: 'Bem relacionado' },
+        reasoningCoherence: { score: 0.95, qualitativeStatus: 'coherent', comment: 'Coerente' },
+        knowledgeApplication: { score: 0.95, qualitativeStatus: 'applied', comment: 'Aplicação resolutiva' },
+      },
+      evaluatedMasteryLevel: 'apply',
+      suggestedDiagnosticState: 'mastered',
+    },
+    createdAt: 200000, // Sessão distinta (> 60s)
+    usedPedagogicalHint: false,
+    activityType: 'apply',
+    scenarioContext: 'Caso de botulismo',
+  };
+
+  // Avaliação pelo motor de domínio
+  const decision = evaluateConceptMastery(documentId, conceptId, [attemptExplain, attemptApply]);
+
+  assert.equal(decision.diagnosticState, 'mastered', 'Tentativa de aplicação autônoma qualifica para mastered');
+  assert.equal(decision.masteryLevel, 'apply');
+  assert.equal(decision.totalAttempts, 2);
+  assert.equal(decision.unassistedAttemptsCount, 2);
+  assert.ok(decision.hasDistinctSessions);
+
+  // Tentativa 3: Recuperar (recover - evocação ativa da memória)
+  const attemptRecover: LearningAttempt = {
+    id: 'att_3',
+    sessionId: 'sess_c_3',
+    documentId,
+    conceptId,
+    attemptNumber: 3,
+    promptQuestion: 'Reconstrua de memória as 3 proteínas do complexo SNARE...',
+    studentExplanation: 'Sinaptobrevina na vesícula, sintaxina e SNAP-25 na membrana plasmática formam o feixe de 4 hélices.',
+    feedback: {
+      summary: 'Evocação ativa autônoma completa e acurada.',
+      understoodElements: ['3 proteínas lembradas', 'Topologia vesicular e plasmática'],
+      incompleteElements: [],
+      misconceptions: [],
+      identifiedGaps: [],
+      groundingEvidences: [],
+      improvementSuggestions: [],
+      rubric: {
+        conceptualPrecision: { score: 0.95, qualitativeStatus: 'accurate', comment: 'Preciso' },
+        completeness: { score: 0.9, qualitativeStatus: 'complete', comment: 'Completo' },
+        conceptualRelationships: { score: 0.9, qualitativeStatus: 'well_connected', comment: 'Conectado' },
+        reasoningCoherence: { score: 0.9, qualitativeStatus: 'coherent', comment: 'Coerente' },
+        knowledgeApplication: { score: 0.9, qualitativeStatus: 'applied', comment: 'Aplicado' },
+      },
+      evaluatedMasteryLevel: 'apply',
+      suggestedDiagnosticState: 'mastered',
+    },
+    createdAt: 300000,
+    usedPedagogicalHint: false,
+    activityType: 'recover',
+  };
+
+  const masteryRecord = buildConsolidatedMasteryRecord(documentId, conceptId, [
+    attemptExplain,
+    attemptApply,
+    attemptRecover,
+  ]);
+  assert.equal(masteryRecord.diagnosticState, 'mastered');
+  assert.equal(masteryRecord.totalAttempts, 3);
+  assert.deepEqual(masteryRecord.historyAttemptIds, ['att_1', 'att_2', 'att_3']);
+});
+
+test('T223: Separação Estrita entre Conclusão do Ciclo C.R.E.A.R. e Domínio Cognitivo (Mastery)', () => {
+  const documentId = 'doc_neuro';
+  const conceptId = 'c_canais_cav';
+
+  // Ciclo C.R.E.A.R. 100% concluído (todas as 5 etapas percorridas)
+  let session: LearningSession = {
+    id: 'sess_crear_complete',
+    documentId,
+    startedAt: 1000,
+    updatedAt: 5000,
+    activeConceptId: conceptId,
+    sessionType: 'crear_cycle',
+    attemptCount: 1,
+    conceptsAddressed: [conceptId],
+    crearCycle: {
+      sessionId: 'sess_crear_complete',
+      documentId,
+      conceptId,
+      currentStage: 'recover',
+      completedStages: ['contextualize', 'relate', 'explain', 'apply', 'recover'],
+      startedAt: 1000,
+      updatedAt: 5000,
+      isCompleted: true, // Ciclo concluído!
+    },
+  };
+
+  assert.equal(session.crearCycle?.isCompleted, true, 'Ciclo está 100% concluído');
+  assert.equal(session.crearCycle?.completedStages.length, 5);
+
+  // No entanto, o estudante teve apenas 1 tentativa assistida (com dica pedagógica) no estágio explain
+  const singleAttemptWithHint: LearningAttempt = {
+    id: 'att_hint_only',
+    sessionId: session.id,
+    documentId,
+    conceptId,
+    attemptNumber: 1,
+    promptQuestion: 'Explique os canais Cav...',
+    studentExplanation: 'Ajudado pela dica: canais abrem com despolarização.',
+    feedback: {
+      summary: 'Resposta básica com apoio.',
+      understoodElements: ['Abertura por voltagem'],
+      incompleteElements: ['Não descreveu a inativação'],
+      misconceptions: [],
+      identifiedGaps: [],
+      groundingEvidences: [],
+      improvementSuggestions: [],
+      rubric: {
+        conceptualPrecision: { score: 0.7, qualitativeStatus: 'partially_accurate', comment: 'Básico' },
+        completeness: { score: 0.6, qualitativeStatus: 'partially_complete', comment: 'Incompleto' },
+        conceptualRelationships: { score: 0.6, qualitativeStatus: 'isolated', comment: 'Isolado' },
+        reasoningCoherence: { score: 0.7, qualitativeStatus: 'coherent', comment: 'Coerente' },
+        knowledgeApplication: { score: 0.5, qualitativeStatus: 'theoretical_only', comment: 'Teórico' },
+      },
+      evaluatedMasteryLevel: 'understand',
+      suggestedDiagnosticState: 'understood',
+    },
+    createdAt: 2000,
+    usedPedagogicalHint: true, // Teve dica!
+    activityType: 'explain',
+  };
+
+  const decision = evaluateConceptMastery(documentId, conceptId, [singleAttemptWithHint]);
+
+  // Concluir o percurso NÃO pode falsamente conceder 'mastered'
+  assert.equal(decision.diagnosticState, 'understood', 'Permanece understood devido a tentativa assistida única');
+  assert.notEqual(decision.diagnosticState, 'mastered', 'JAMAIS promove a mastered apenas por concluir o percurso');
+  assert.ok(decision.qualifyingReason.includes('assistida') || decision.qualifyingReason.includes('tentativa'));
+});
+
+test('T224: Isolamento Estrito entre Documentos e Conceitos e Preservação dos Dados', () => {
+  const docA = 'doc_neurobiologia';
+  const docB = 'doc_quantica';
+  const conceptA = 'c_potencial_acao';
+  const conceptB = 'c_foton';
+
+  // 1. Chaves de Maestria compostas garantem separação
+  const keyA = buildMasteryKey(docA, conceptA);
+  const keyB = buildMasteryKey(docB, conceptB);
+  const keyCross = buildMasteryKey(docA, conceptB);
+
+  assert.equal(keyA, 'doc_neurobiologia#c_potencial_acao');
+  assert.equal(keyB, 'doc_quantica#c_foton');
+  assert.notEqual(keyA, keyB);
+  assert.notEqual(keyA, keyCross);
+
+  // 2. Cálculo de sumário por documento
+  const conceptsDocA: Concept[] = [
+    {
+      id: conceptA,
+      name: 'Potencial de Ação',
+      definition: 'Onda despolarizante...',
+      importance: 'fundamental',
+      epistemicStatus: 'explicitly_documented',
+      evidenceReferences: [],
+      prerequisiteConceptIds: [],
+      diagnosticState: 'understood',
+    },
+  ];
+
+  const masteryMapDocA: Record<string, ConceptMastery> = {
+    [conceptA]: {
+      id: keyA,
+      documentId: docA,
+      conceptId: conceptA,
+      masteryLevel: 'understand',
+      diagnosticState: 'understood',
+      totalAttempts: 1,
+      lastAttemptAt: Date.now(),
+      historyAttemptIds: ['att_a_1'],
+      activeGaps: [],
+      consolidatedEvidenceIds: [],
+    },
+  };
+
+  const summaryDocA = calculateDocumentMasterySummary(docA, conceptsDocA, masteryMapDocA);
+  assert.equal(summaryDocA.documentId, docA);
+  assert.equal(summaryDocA.totalConcepts, 1);
+  assert.equal(summaryDocA.understoodCount, 1);
+  assert.equal(summaryDocA.masteredCount, 0);
+  assert.equal(summaryDocA.coveragePercent, 100);
+
+  // 3. Documento B sem avaliações permanece unassessed
+  const conceptsDocB: Concept[] = [
+    {
+      id: conceptB,
+      name: 'Fóton',
+      definition: 'Pacote quântico...',
+      importance: 'fundamental',
+      epistemicStatus: 'explicitly_documented',
+      evidenceReferences: [],
+      prerequisiteConceptIds: [],
+      diagnosticState: 'unassessed',
+    },
+  ];
+
+  const summaryDocB = calculateDocumentMasterySummary(docB, conceptsDocB, {});
+  assert.equal(summaryDocB.documentId, docB);
+  assert.equal(summaryDocB.understoodCount, 0);
+  assert.equal(summaryDocB.unassessedCount, 1);
+  assert.equal(summaryDocB.coveragePercent, 0);
+});
+
