@@ -13,6 +13,7 @@ import {
   checkStorageQuota,
   exportUserDataAsJson,
   getAllMasteryByDocument,
+  getReviewSchedulesByDocument,
 } from './services/persistence/indexedDb';
 import { DEMO_MATERIALS } from './services/documents/demoMaterials';
 import { requestDocumentAnalysis } from './services/ai/aiClient';
@@ -26,6 +27,7 @@ import { DemoModal } from './components/documents/DemoModal';
 import { Phase1ReportModal } from './components/documents/Phase1ReportModal';
 import { AgoraEuExplicoModal } from './components/explanation/AgoraEuExplicoModal';
 import { CrearCycleModal } from './components/crear/CrearCycleModal';
+import { SpacedReviewModal } from './components/review/SpacedReviewModal';
 import { BookOpen, AlertCircle, FileCheck, Brain, ArrowRight } from 'lucide-react';
 
 export default function App() {
@@ -44,6 +46,9 @@ export default function App() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
   const [isCrearModalOpen, setIsCrearModalOpen] = useState(false);
+  const [isSpacedReviewOpen, setIsSpacedReviewOpen] = useState(false);
+  const [spacedReviewConceptId, setSpacedReviewConceptId] = useState<string | null>(null);
+  const [reviewDueCount, setReviewDueCount] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'blackboard' | 'notebook' | 'document_preview'>('blackboard');
 
   // Estado de Saúde e Armazenamento
@@ -84,6 +89,23 @@ export default function App() {
     }
   }, []);
 
+  // Recarregar contador de revisões pendentes (vencidas ou para hoje)
+  const refreshReviewCount = useCallback(async (docId?: string) => {
+    if (!docId) {
+      setReviewDueCount(0);
+      return;
+    }
+    try {
+      const schedules = await getReviewSchedulesByDocument(docId);
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      const dueCount = schedules.filter(s => new Date(s.nextReviewDue) <= todayMidnight).length;
+      setReviewDueCount(dueCount);
+    } catch (err) {
+      console.error('Erro ao verificar agendamentos FSRS:', err);
+    }
+  }, []);
+
   // Carregar documentos salvos na inicialização
   useEffect(() => {
     const initApp = async () => {
@@ -102,13 +124,14 @@ export default function App() {
           setSelectedConcept(firstDemo.analysis.fundamentalConcepts[0] || null);
           setDocuments([firstDemo.document]);
           await reloadMastery(firstDemo.document.id);
+          await refreshReviewCount(firstDemo.document.id);
         }
       } catch (err) {
         console.error('Falha ao inicializar o banco IndexedDB:', err);
       }
     };
     initApp();
-  }, [refreshStorage, reloadMastery]);
+  }, [refreshStorage, reloadMastery, refreshReviewCount]);
 
   // Troca de Documento Ativo com isolamento completo de contexto
   const handleSelectDocument = async (doc: DocumentSource) => {
@@ -126,6 +149,7 @@ export default function App() {
       setNotes([]);
       setChatHistory([]);
       await reloadMastery(doc.id);
+      await refreshReviewCount(doc.id);
       return;
     }
 
@@ -144,6 +168,7 @@ export default function App() {
       setChatHistory(savedChat);
 
       await reloadMastery(doc.id);
+      await refreshReviewCount(doc.id);
     } catch (err) {
       console.error('Erro ao alternar de documento:', err);
     }
@@ -333,6 +358,11 @@ export default function App() {
         onOpenReport={() => setIsReportModalOpen(true)}
         onOpenExplain={() => setIsExplainModalOpen(true)}
         onOpenCrearCycle={() => setIsCrearModalOpen(true)}
+        onOpenSpacedReview={() => {
+          setSpacedReviewConceptId(null);
+          setIsSpacedReviewOpen(true);
+        }}
+        reviewDueCount={reviewDueCount}
         healthStatus={{ gemini_multimodal: healthStatus }}
         storageUsage={storageUsage}
       />
@@ -428,6 +458,10 @@ export default function App() {
                 onStartCrearCycle={(c) => {
                   setSelectedConcept(c);
                   setIsCrearModalOpen(true);
+                }}
+                onOpenSpacedReview={(conceptId) => {
+                  setSpacedReviewConceptId(conceptId || null);
+                  setIsSpacedReviewOpen(true);
                 }}
                 onRegenerateGraph={!activeDocument?.isDemoMaterial ? handleRegenerateGraph : undefined}
                 isRegenerating={isAnalyzing}
@@ -558,6 +592,42 @@ export default function App() {
         onConceptMasteryChanged={(conceptId, updatedMastery) => {
           if (activeDocument) {
             reloadMastery(activeDocument.id);
+            refreshReviewCount(activeDocument.id);
+          }
+          if (!analysis) return;
+          setAnalysis(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              fundamentalConcepts: prev.fundamentalConcepts.map(c =>
+                c.id === conceptId ? { ...c, diagnosticState: updatedMastery.diagnosticState } : c
+              ),
+              complementaryConcepts: prev.complementaryConcepts.map(c =>
+                c.id === conceptId ? { ...c, diagnosticState: updatedMastery.diagnosticState } : c
+              ),
+            };
+          });
+        }}
+      />
+
+      <SpacedReviewModal
+        isOpen={isSpacedReviewOpen}
+        onClose={() => {
+          setIsSpacedReviewOpen(false);
+          setSpacedReviewConceptId(null);
+          if (activeDocument) refreshReviewCount(activeDocument.id);
+        }}
+        document={activeDocument}
+        concepts={
+          analysis
+            ? [...analysis.fundamentalConcepts, ...analysis.complementaryConcepts]
+            : []
+        }
+        initialConceptId={spacedReviewConceptId}
+        onConceptMasteryChanged={(conceptId, updatedMastery) => {
+          if (activeDocument) {
+            reloadMastery(activeDocument.id);
+            refreshReviewCount(activeDocument.id);
           }
           if (!analysis) return;
           setAnalysis(prev => {

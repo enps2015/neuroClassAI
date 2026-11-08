@@ -7,6 +7,7 @@ import type {
   LearningSession,
   LearningAttempt,
   ConceptMastery,
+  ConceptReviewSchedule,
 } from '../../types';
 
 interface NeuroClassDB extends DBSchema {
@@ -58,14 +59,88 @@ interface NeuroClassDB extends DBSchema {
       'by-diagnostic-state': string;
     };
   };
+  /* Marco 2D: Recuperação Espaçada e Memória Longitudinal FSRS-7 */
+  review_schedules: {
+    key: string; // `${documentId}#${conceptId}`
+    value: ConceptReviewSchedule;
+    indexes: {
+      'by-document': string;
+      'by-concept': string;
+      'by-due': string;
+    };
+  };
 }
 
 const DB_NAME = 'neuroclass_ai_db';
-const DB_VERSION = 2; // Evolução de schema v1 -> v2 (Fase 2)
+const DB_VERSION = 3; // Evolução de schema v2 -> v3 (Marco 2D: FSRS-7)
 
 let dbPromise: Promise<IDBPDatabase<NeuroClassDB>> | null = null;
 
+// Emulador em memória para execução de testes em ambiente Node.js puro sem indexedDB global
+const inMemoryStore = new Map<string, Map<string, any>>();
+function getInMemStore(storeName: string): Map<string, any> {
+  if (!inMemoryStore.has(storeName)) {
+    inMemoryStore.set(storeName, new Map());
+  }
+  return inMemoryStore.get(storeName)!;
+}
+
+const inMemoryMockDb: any = {
+  put: async (store: string, value: any) => {
+    const s = getInMemStore(store);
+    const key = value.id || value.documentId || value.key;
+    s.set(key, JSON.parse(JSON.stringify(value)));
+  },
+  get: async (store: string, key: string) => {
+    const s = getInMemStore(store);
+    const val = s.get(key);
+    return val ? JSON.parse(JSON.stringify(val)) : undefined;
+  },
+  delete: async (store: string, key: string) => {
+    const s = getInMemStore(store);
+    s.delete(key);
+  },
+  getAll: async (store: string) => {
+    const s = getInMemStore(store);
+    return Array.from(s.values()).map(v => JSON.parse(JSON.stringify(v)));
+  },
+  getAllFromIndex: async (store: string, index: string, queryKey: any) => {
+    const s = getInMemStore(store);
+    const all = Array.from(s.values());
+    if (index === 'by-document') {
+      return all.filter(item => item.documentId === queryKey).map(v => JSON.parse(JSON.stringify(v)));
+    }
+    if (index === 'by-concept') {
+      return all.filter(item => item.conceptId === queryKey).map(v => JSON.parse(JSON.stringify(v)));
+    }
+    if (index === 'by-session') {
+      return all.filter(item => item.sessionId === queryKey).map(v => JSON.parse(JSON.stringify(v)));
+    }
+    if (index === 'by-diagnostic-state') {
+      return all.filter(item => item.diagnosticState === queryKey).map(v => JSON.parse(JSON.stringify(v)));
+    }
+    return all.map(v => JSON.parse(JSON.stringify(v)));
+  },
+  transaction: (stores: string[], mode: string) => ({
+    objectStore: (store: string) => ({
+      get: async (key: string) => inMemoryMockDb.get(store, key),
+      delete: async (key: string) => inMemoryMockDb.delete(store, key),
+      index: (indexName: string) => ({
+        getAllKeys: async (queryKey: any) => {
+          const items = await inMemoryMockDb.getAllFromIndex(store, indexName, queryKey);
+          return items.map((i: any) => i.id || i.documentId);
+        },
+      }),
+    }),
+    done: Promise.resolve(),
+  }),
+};
+
 export async function getDB(): Promise<IDBPDatabase<NeuroClassDB>> {
+  if (typeof indexedDB === 'undefined') {
+    return inMemoryMockDb as IDBPDatabase<NeuroClassDB>;
+  }
+
   if (!dbPromise) {
     dbPromise = openDB<NeuroClassDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
@@ -115,6 +190,16 @@ export async function getDB(): Promise<IDBPDatabase<NeuroClassDB>> {
             masteryStore.createIndex('by-document', 'documentId');
             masteryStore.createIndex('by-concept', 'conceptId');
             masteryStore.createIndex('by-diagnostic-state', 'diagnosticState');
+          }
+        }
+
+        // v3 Store (Marco 2D: Recuperação Espaçada e Memória Longitudinal FSRS-7)
+        if (oldVersion < 3 || !db.objectStoreNames.contains('review_schedules')) {
+          if (!db.objectStoreNames.contains('review_schedules')) {
+            const scheduleStore = db.createObjectStore('review_schedules', { keyPath: 'id' });
+            scheduleStore.createIndex('by-document', 'documentId');
+            scheduleStore.createIndex('by-concept', 'conceptId');
+            scheduleStore.createIndex('by-due', 'nextReviewDue');
           }
         }
       },
@@ -324,6 +409,7 @@ export async function deleteDocumentCompletely(documentId: string): Promise<void
       'learning_sessions',
       'learning_attempts',
       'concept_mastery',
+      'review_schedules',
     ],
     'readwrite'
   );
@@ -373,7 +459,55 @@ export async function deleteDocumentCompletely(documentId: string): Promise<void
     await masteryStore.delete(key);
   }
 
+  // Limpar agendamentos de repetição espaçada Marco 2D
+  const scheduleStore = tx.objectStore('review_schedules');
+  const scheduleKeys = await scheduleStore.index('by-document').getAllKeys(documentId);
+  for (const key of scheduleKeys) {
+    await scheduleStore.delete(key);
+  }
+
   await tx.done;
+}
+
+/**
+ * Persiste ou atualiza o agendamento de repetição espaçada de um conceito.
+ */
+export async function saveReviewSchedule(schedule: ConceptReviewSchedule): Promise<void> {
+  const db = await getDB();
+  await db.put('review_schedules', schedule);
+}
+
+/**
+ * Obtém o agendamento de repetição espaçada de um conceito específico.
+ */
+export async function getReviewSchedule(
+  documentId: string,
+  conceptId: string
+): Promise<ConceptReviewSchedule | null> {
+  const db = await getDB();
+  const schedule = await db.get('review_schedules', buildMasteryKey(documentId, conceptId));
+  return schedule || null;
+}
+
+/**
+ * Lista todos os agendamentos de repetição espaçada de um documento.
+ */
+export async function getReviewSchedulesByDocument(
+  documentId: string
+): Promise<ConceptReviewSchedule[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('review_schedules', 'by-document', documentId);
+}
+
+/**
+ * Remove o agendamento de repetição espaçada de um conceito.
+ */
+export async function deleteReviewSchedule(
+  documentId: string,
+  conceptId: string
+): Promise<void> {
+  const db = await getDB();
+  await db.delete('review_schedules', buildMasteryKey(documentId, conceptId));
 }
 
 /**
@@ -387,10 +521,11 @@ export async function exportUserDataAsJson(): Promise<string> {
   const attempts = await db.getAll('learning_attempts');
   const mastery = await db.getAll('concept_mastery');
   const sessions = await db.getAll('learning_sessions');
+  const schedules = await db.getAll('review_schedules');
 
   const exportPayload = {
     exportedAt: new Date().toISOString(),
-    version: '2.3',
+    version: '2.4',
     data: {
       documents: documents.filter(d => !d.isDemoMaterial),
       analyses,
@@ -398,7 +533,94 @@ export async function exportUserDataAsJson(): Promise<string> {
       learningAttempts: attempts,
       conceptMastery: mastery,
       learningSessions: sessions,
+      reviewSchedules: schedules,
     },
   };
   return JSON.stringify(exportPayload, null, 2);
+}
+
+/**
+ * Restaura dados do usuário a partir de um backup JSON, garantindo reconstituição fiel
+ * de documentos, análises, notas, tentativas, domínio cognitivo e agendamentos FSRS com histórico de logs.
+ */
+export async function restoreUserDataFromJson(jsonString: string): Promise<{
+  documentsCount: number;
+  analysesCount: number;
+  notesCount: number;
+  attemptsCount: number;
+  masteryCount: number;
+  sessionsCount: number;
+  schedulesCount: number;
+}> {
+  const payload = JSON.parse(jsonString);
+  const data = payload?.data;
+  if (!data) throw new Error('Formato de backup inválido: bloco "data" não encontrado.');
+
+  const db = await getDB();
+
+  let documentsCount = 0;
+  if (Array.isArray(data.documents)) {
+    for (const doc of data.documents) {
+      await db.put('documents', doc);
+      documentsCount++;
+    }
+  }
+
+  let analysesCount = 0;
+  if (Array.isArray(data.analyses)) {
+    for (const analysis of data.analyses) {
+      await db.put('analyses', analysis);
+      analysesCount++;
+    }
+  }
+
+  let notesCount = 0;
+  if (Array.isArray(data.notes)) {
+    for (const note of data.notes) {
+      await db.put('notes', note);
+      notesCount++;
+    }
+  }
+
+  let attemptsCount = 0;
+  if (Array.isArray(data.learningAttempts)) {
+    for (const attempt of data.learningAttempts) {
+      await db.put('learning_attempts', attempt);
+      attemptsCount++;
+    }
+  }
+
+  let masteryCount = 0;
+  if (Array.isArray(data.conceptMastery)) {
+    for (const m of data.conceptMastery) {
+      await db.put('concept_mastery', m);
+      masteryCount++;
+    }
+  }
+
+  let sessionsCount = 0;
+  if (Array.isArray(data.learningSessions)) {
+    for (const session of data.learningSessions) {
+      await db.put('learning_sessions', session);
+      sessionsCount++;
+    }
+  }
+
+  let schedulesCount = 0;
+  if (Array.isArray(data.reviewSchedules)) {
+    for (const sched of data.reviewSchedules) {
+      await db.put('review_schedules', sched);
+      schedulesCount++;
+    }
+  }
+
+  return {
+    documentsCount,
+    analysesCount,
+    notesCount,
+    attemptsCount,
+    masteryCount,
+    sessionsCount,
+    schedulesCount,
+  };
 }

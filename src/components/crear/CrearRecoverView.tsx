@@ -12,6 +12,7 @@ import {
   Sparkles,
   PartyPopper,
   ShieldAlert,
+  Clock,
 } from 'lucide-react';
 import type {
   Concept,
@@ -25,7 +26,9 @@ import {
   saveLearningAttempt,
   saveConceptMastery,
   getAttemptsByConcept,
+  getReviewSchedule,
 } from '../../services/persistence/indexedDb';
+import { enrollConceptInSpacedRepetition } from '../../services/learning/spacedRepetitionService';
 import { buildConsolidatedMasteryRecord } from '../../services/learning/masteryEngine';
 import { getMasteryLevelMeta, getDiagnosticStateMeta } from '../../utils/pedagogicalLabels';
 
@@ -57,6 +60,7 @@ export const CrearRecoverView: React.FC<CrearRecoverViewProps> = ({
   const [attempts, setAttempts] = useState<LearningAttempt[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showNewAttemptForm, setShowNewAttemptForm] = useState(false);
+  const [isEnrolledInFsrs, setIsEnrolledInFsrs] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -64,8 +68,14 @@ export const CrearRecoverView: React.FC<CrearRecoverViewProps> = ({
     async function loadRecoverContext() {
       if (!document) return;
       try {
-        const pastAttempts = await getAttemptsByConcept(document.id, concept.id);
+        const [pastAttempts, existingSched] = await Promise.all([
+          getAttemptsByConcept(document.id, concept.id),
+          getReviewSchedule(document.id, concept.id),
+        ]);
         if (isMounted) {
+          if (existingSched) {
+            setIsEnrolledInFsrs(true);
+          }
           setAttempts(pastAttempts);
           const recoverAttempts = pastAttempts.filter(a => a.activityType === 'recover');
           if (recoverAttempts.length > 0) {
@@ -89,6 +99,16 @@ export const CrearRecoverView: React.FC<CrearRecoverViewProps> = ({
       isMounted = false;
     };
   }, [concept.id, document?.id]);
+
+  const handleEnrollFsrs = async () => {
+    if (!document) return;
+    try {
+      await enrollConceptInSpacedRepetition(document, concept);
+      setIsEnrolledInFsrs(true);
+    } catch (err) {
+      console.error('Erro ao agendar revisão espaçada:', err);
+    }
+  };
 
   const fetchRetrievalQuestion = async () => {
     setIsGeneratingQuestion(true);
@@ -349,16 +369,36 @@ export const CrearRecoverView: React.FC<CrearRecoverViewProps> = ({
               </div>
 
               {/* Notificação de Conclusão do Ciclo C.R.E.A.R. */}
-              <div className="p-4 bg-gradient-to-r from-violet-950/40 to-cyan-950/40 border border-cyan-500/30 rounded-xl flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/40">
-                  <PartyPopper className="w-5 h-5 text-cyan-300" />
+              <div className="p-4 bg-gradient-to-r from-violet-950/40 to-cyan-950/40 border border-cyan-500/30 rounded-xl space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/40">
+                    <PartyPopper className="w-5 h-5 text-cyan-300" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <h4 className="text-xs font-bold text-white">Ciclo C.R.E.A.R. Completo para "{concept.name}"!</h4>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Você percorreu todos os 5 estágios: Contextualizar, Relacionar, Explicar, Aplicar e Recuperar.
+                      Suas evidências foram consolidadas no histórico cognitivo.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-0.5">
-                  <h4 className="text-xs font-bold text-white">Ciclo C.R.E.A.R. Completo para "{concept.name}"!</h4>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
-                    Você percorreu todos os 5 estágios: Contextualizar, Relacionar, Explicar, Aplicar e Recuperar.
-                    Suas evidências foram consolidadas no histórico cognitivo.
-                  </p>
+
+                <div className="flex items-center gap-2 pt-1 border-t border-cyan-500/20">
+                  {isEnrolledInFsrs ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 rounded-lg text-[11px] font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      Agendado no Plano de Revisão Espaçada (FSRS-7)
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleEnrollFsrs}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-900/60 hover:bg-cyan-800/80 border border-cyan-500/40 text-cyan-200 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                      Agendar no Plano de Revisão Espaçada (FSRS-7)
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

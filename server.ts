@@ -8,8 +8,10 @@ import {
   sanitizeContextTip,
   sanitizeApplicationScenario,
   sanitizeRetrievalQuestion,
+  sanitizeReviewQuestion,
   generateDeterministicApplicationScenario,
   generateDeterministicRetrievalQuestion,
+  generateDeterministicReviewQuestion,
 } from './src/services/ai/i18nSanitizer';
 
 dotenv.config();
@@ -503,7 +505,7 @@ app.post('/api/gemini/generate-concept-question', async (req, res) => {
       return;
     }
 
-    const currentActivity: 'explain' | 'apply' | 'recover' = activityType || 'explain';
+    const currentActivity: 'explain' | 'apply' | 'recover' | 'review' = activityType || 'explain';
 
     let systemInstruction = `Você é o formulador pedagógico de perguntas abertas do NeuroClass AI (método C.R.E.A.R. e Técnica de Feynman).
 Sua missão é gerar UMA PERGUNTA ABERTA, PROFUNDA E INSTIGANTE que convide o estudante a EXPLICAR COM SUAS PRÓPRIAS PALAVRAS o mecanismo de um conceito científico.
@@ -541,6 +543,18 @@ DIRETRIZES OBRIGATÓRIAS:
    - Instrua explicitamente o estudante a responder de memória, explicando a sequência causal, componentes essenciais e o que ocorreria se uma etapa falhasse.
 3. DICA CONTEXTUAL:
    - Dica encorajadora sobre como recuperar a sequência mental dos eventos.`;
+    } else if (currentActivity === 'review') {
+      systemInstruction = `Você é o formulador pedagógico de desafios de recuperação espaçada (Spaced Repetition & Longitudinal Memory Engine - Marco 2D) do NeuroClass AI.
+Sua missão é gerar UMA PERGUNTA ABERTA DE EVOCAÇÃO ATIVA que desafie o estudante a RECUPERAR DA MEMÓRIA os mecanismos causais e relações dinâmicas do conceito, sem consultar anotações ou o texto do material.
+
+DIRETRIZES OBRIGATÓRIAS:
+1. IDIOMA RIGOROSAMENTE OBRIGATÓRIO — PORTUGUÊS DO BRASIL (PT-BR):
+   - Todo o texto da pergunta ('question') e da dica ('contextTip') deve estar estritamente em Português do Brasil.
+2. FOCO EM RECUPERAÇÃO CONCEITUAL E CAUSAL:
+   - Formule uma questão que exija reconstruir o mecanismo passo a passo (causa, mediadores, desfecho e relação com pré-requisitos).
+   - Não faça perguntas de sim/não ou memorização mecânica de palavras-chave.
+3. DICA CONTEXTUAL:
+   - Dica orientadora que apoie o raciocínio caso o estudante solicite ajuda pedagógica.`;
     }
 
     const parts: any[] = [{ text: systemInstruction }];
@@ -584,6 +598,8 @@ ${targetMasteryLevel ? `NÍVEL DE DOMÍNIO ALMEJADO: ${targetMasteryLevel}` : ''
       sanitizedQuestion = sanitizeApplicationScenario(parsed.question || '', concept.name, subject);
     } else if (currentActivity === 'recover') {
       sanitizedQuestion = sanitizeRetrievalQuestion(parsed.question || '', concept.name);
+    } else if (currentActivity === 'review') {
+      sanitizedQuestion = sanitizeReviewQuestion(parsed.question || '', concept.name);
     } else {
       sanitizedQuestion = sanitizeConceptQuestion(parsed.question || '', concept.name);
     }
@@ -641,7 +657,7 @@ app.post('/api/gemini/evaluate-explanation', async (req, res) => {
       return;
     }
 
-    const currentActivity: 'explain' | 'apply' | 'recover' = activityType || 'explain';
+    const currentActivity: 'explain' | 'apply' | 'recover' | 'review' = activityType || 'explain';
 
     const effectivePromptQuestion =
       (promptQuestion && typeof promptQuestion === 'string' && promptQuestion.trim()) ||
@@ -661,6 +677,16 @@ app.post('/api/gemini/evaluate-explanation', async (req, res) => {
    - O estudante realizou uma prática de recuperação ativa (testing effect) evocando a memória do mecanismo sem consulta direta ao documento.
    - Avalie a completude dos elementos essenciais lembrados e a ausência de distorções causais.
    - Aponte com precisão em 'incompleteElements' e 'identifiedGaps' quais elos da cadeia causal não foram recuperados da memória.`;
+    } else if (currentActivity === 'review') {
+      activityDirective = `
+5. DIRETRIZ ESPECÍFICA PARA 'REVISÃO ESPAÇADA / MOTOR LONGITUDINAL FSRS-7' (Marco 2D):
+   - O estudante respondeu a uma sessão de revisão espaçada de retenção de memória de longo prazo.
+   - Avalie rigorosamente a precisão conceitual, coerência causal e ausência de contradições materiais.
+   - Diferencie claramente:
+     * Resposta fluida com domínio de causa-efeito e generalização (concede 'transfer' ou 'apply').
+     * Resposta correta padrão dos pontos fundamentais (concede 'understand').
+     * Resposta parcial, vaga ou que exigiu dica/esforço excessivo (concede 'recognize').
+     * Resposta errônea com contradições graves (identifique em 'misconceptions' ou 'identifiedGaps').`;
     }
 
     const systemInstruction = `Você é o Avaliador Cognitivo de Alto Rigor Científico do NeuroClass AI (Fase 2: Aprendizagem Cognitiva e Avaliação - Ciclo C.R.E.A.R.).

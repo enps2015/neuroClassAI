@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, HelpCircle, Layers, ShieldCheck, RefreshCw, Loader2, Sparkles, CheckCircle2, AlertTriangle, CircleDashed, Award } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, HelpCircle, Layers, ShieldCheck, RefreshCw, Loader2, Sparkles, CheckCircle2, AlertTriangle, CircleDashed, Award, Clock } from 'lucide-react';
 import type { Concept, ConceptRelationship, LearningAnalysis, RelationshipType, ConceptMastery, DiagnosticState, MasteryLevel } from '../../types';
 import { calculateDocumentMasterySummary } from '../../services/learning/masteryEngine';
 import { getDiagnosticStateMeta, getMasteryLevelMeta } from '../../utils/pedagogicalLabels';
@@ -11,6 +11,7 @@ interface BlackboardProps {
   onAskTutorAboutConcept: (concept: Concept) => void;
   onExplainConcept?: (concept: Concept) => void;
   onStartCrearCycle?: (concept: Concept) => void;
+  onOpenSpacedReview?: (conceptId?: string) => void;
   onRegenerateGraph?: () => void;
   isRegenerating?: boolean;
   masteryMap?: Record<string, ConceptMastery>;
@@ -23,6 +24,7 @@ export const Blackboard: React.FC<BlackboardProps> = ({
   onAskTutorAboutConcept,
   onExplainConcept,
   onStartCrearCycle,
+  onOpenSpacedReview,
   onRegenerateGraph,
   isRegenerating = false,
   masteryMap,
@@ -609,6 +611,16 @@ export const Blackboard: React.FC<BlackboardProps> = ({
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Agora Eu Explico</span>
+                </button>
+              )}
+              {onOpenSpacedReview && (
+                <button
+                  onClick={() => onOpenSpacedReview(selectedConcept.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg shadow-sm shadow-emerald-700/30 transition-all cursor-pointer"
+                  title="Abrir sessão de recuperação espaçada (FSRS-7) para este conceito"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Revisar (FSRS)</span>
                 </button>
               )}
               <button

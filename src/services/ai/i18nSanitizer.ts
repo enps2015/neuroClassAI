@@ -322,4 +322,43 @@ export function sanitizeRetrievalQuestion(
   };
 }
 
+/**
+ * Gera pergunta determinística de revisão espaçada (FSRS-7 - Marco 2D).
+ */
+export function generateDeterministicReviewQuestion(conceptName: string, previousLapses: number = 0): string {
+  const cleanName = conceptName.trim();
+  if (previousLapses > 0) {
+    return `Revisão de Recuperação: Você registrou dificuldades prévias no mecanismo de "${cleanName}". Sem consultar o material, reconstrua a sequência causal completa de sua ocorrência: o que desencadeia o processo, quais são os mediadores essenciais e qual é o desfecho funcional?`;
+  }
+  return `Revisão de Recuperação Espaçada: Evocando estritamente de memória e com suas próprias palavras, explique como opera o mecanismo de "${cleanName}". O que deflagra este evento e o que aconteceria caso sua etapa intermediária falhasse?`;
+}
+
+/**
+ * Sanitiza perguntas de revisão espaçada garantindo conformidade rigorosa com PT-BR.
+ */
+export function sanitizeReviewQuestion(
+  rawQuestion: string,
+  conceptName: string,
+  previousLapses: number = 0
+): SanitizedI18nResult {
+  const detection = detectTextLanguage(rawQuestion, conceptName);
+
+  if (detection.detectedLanguage === 'pt-br') {
+    return {
+      text: rawQuestion.trim(),
+      isFallback: false,
+      detectedLanguage: 'pt-br',
+      reason: detection.reason,
+    };
+  }
+
+  return {
+    text: generateDeterministicReviewQuestion(conceptName, previousLapses),
+    isFallback: true,
+    detectedLanguage: detection.detectedLanguage,
+    reason: `Substituído por formulação determinística de revisão espaçada em PT-BR: ${detection.reason}`,
+  };
+}
+
+
 

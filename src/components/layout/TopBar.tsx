@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Database, BookOpen, AlertCircle, HardDrive, FileText } from 'lucide-react';
+import { Sparkles, Database, BookOpen, AlertCircle, HardDrive, FileText, Clock } from 'lucide-react';
 import type { DocumentSource, ServiceHealthStatus } from '../../types';
 
 interface TopBarProps {
@@ -11,6 +11,8 @@ interface TopBarProps {
   onOpenReport?: () => void;
   onOpenExplain?: () => void;
   onOpenCrearCycle?: () => void;
+  onOpenSpacedReview?: () => void;
+  reviewDueCount?: number;
   healthStatus: Record<string, ServiceHealthStatus>;
   storageUsage: { usagePercent: number; isCritical: boolean };
 }
@@ -24,6 +26,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenReport,
   onOpenExplain,
   onOpenCrearCycle,
+  onOpenSpacedReview,
+  reviewDueCount,
   healthStatus,
   storageUsage,
 }) => {
@@ -98,6 +102,22 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
             <span>Agora Eu Explico</span>
+          </button>
+        )}
+
+        {onOpenSpacedReview && (
+          <button
+            onClick={onOpenSpacedReview}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-300 hover:text-white bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/30 rounded-lg transition-colors whitespace-nowrap shadow-sm shadow-emerald-500/10 cursor-pointer relative"
+            title="Acessar fila de recuperação e acompanhamento longitudinal FSRS-7"
+          >
+            <Clock className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Revisão Espaçada</span>
+            {typeof reviewDueCount === 'number' && reviewDueCount > 0 && (
+              <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-emerald-500 text-slate-950">
+                {reviewDueCount}
+              </span>
+            )}
           </button>
         )}
       </div>

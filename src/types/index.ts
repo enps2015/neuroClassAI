@@ -280,8 +280,10 @@ export interface LearningAttempt {
   feedback: ExplanationFeedback;
   createdAt: number;
   usedPedagogicalHint?: boolean;
-  activityType?: 'explain' | 'apply' | 'recover';
+  activityType?: 'explain' | 'apply' | 'recover' | 'review';
   scenarioContext?: string;
+  reviewRating?: 'again' | 'hard' | 'good' | 'easy';
+  confidenceDeclared?: 'low' | 'medium' | 'high';
 }
 
 /**
@@ -388,7 +390,7 @@ export interface EvaluateExplanationRequest {
   promptQuestion: string;
   studentExplanation: string;
   attemptNumber: number;
-  activityType?: 'explain' | 'apply' | 'recover';
+  activityType?: 'explain' | 'apply' | 'recover' | 'review';
   scenarioContext?: string;
   previousAttempts?: Array<{
     attemptNumber: number;
@@ -416,7 +418,7 @@ export interface GenerateConceptQuestionRequest {
     evidenceReferences?: EvidenceReference[];
   };
   targetMasteryLevel?: MasteryLevel;
-  activityType?: 'explain' | 'apply' | 'recover';
+  activityType?: 'explain' | 'apply' | 'recover' | 'review';
   documentExcerpts?: string[];
 }
 
@@ -425,4 +427,135 @@ export interface GenerateConceptQuestionResponse {
   targetedPrerequisiteIds: string[];
   contextTip?: string;
   timestamp: number;
+}
+
+/**
+ * ============================================================================
+ * MARCO 2D: SISTEMA DE RECUPERAÇÃO ESPAÇADA E MEMÓRIA LONGITUDINAL (FSRS-7)
+ * ============================================================================
+ */
+
+/**
+ * Classificação de desempenho de recuperação no FSRS-7.
+ */
+export type FsrsRatingGrade = 'again' | 'hard' | 'good' | 'easy';
+
+/**
+ * Estado da memória segundo o modelo FSRS-7 da biblioteca ts-fsrs.
+ */
+export interface FsrsMemoryState {
+  stability: number;       // Estabilidade da memória (dias até a probabilidade de retenção atingir 90%)
+  stabilityFast: number;   // Parâmetro rápido de estabilidade do modelo FSRS-7
+  difficulty: number;      // Dificuldade intrínseca do conceito (escala 1 a 10)
+  state: number;           // 0: New, 1: Learning, 2: Review, 3: Relearning
+  scheduleStatus: 'new' | 'learning' | 'review' | 'relearning';
+  reps: number;            // Total de revisões completadas
+  lapses: number;          // Total de falhas (Again)
+  scheduledDays: number;   // Dias programados até a próxima revisão
+  dueAt: string;           // Data da próxima revisão em formato ISO UTC
+  lastReviewAt: string | null; // Data da última revisão em formato ISO UTC
+  learningStep?: number;
+}
+
+/**
+ * Registro individual de uma revisão executada no histórico longitudinal.
+ */
+export interface ReviewLogEntry {
+  id: string;              // UUID do log
+  documentId: string;
+  conceptId: string;
+  attemptId: string;       // ID da LearningAttempt correspondente
+  reviewSessionId?: string;
+  reviewedAt: string;      // ISO UTC timestamp da revisão
+  grade: FsrsRatingGrade;  // again | hard | good | easy
+  fsrsRating: number;      // 1 | 2 | 3 | 4
+  scheduledDays: number;   // Dias programados pelo modelo (novo intervalo)
+  lastScheduledDays?: number; // Intervalo anterior programado
+  elapsedDays: number;     // Dias reais transcorridos desde a última revisão
+  stability: number;       // Estabilidade pós-revisão
+  difficulty: number;      // Dificuldade pós-revisão
+  retrievabilityEstimated: number; // Probabilidade calculada pelo modelo (0 a 1) no momento do teste
+  usedHint: boolean;
+  confidenceDeclared?: 'low' | 'medium' | 'high';
+  pedagogicalRationale: string;
+  evaluatedMasteryLevel: MasteryLevel;
+  stateBefore: number;
+  stateAfter: number;
+  algorithm?: 'FSRS-7';
+  algorithmVersion?: string; // Ex: "ts-fsrs@6.0.0 / FSRS-7"
+  desiredRetention?: number; // Padrão: 0.90
+  fsrsRevlog?: {
+    cardId?: string;
+    rating: number;
+    state: number;
+    dueAt: string;
+    lastReviewAt: string | null;
+    reviewTime: string;
+    scheduledDays: number;
+    learningStep: number;
+    stability: number;
+    stabilityFast?: number;
+    difficulty: number;
+    scheduleStatus: string;
+  };
+}
+
+/**
+ * Agendamento e estado de repetição espaçada por conceito e documento.
+ */
+export interface ConceptReviewSchedule {
+  id: string;              // Composto: `${documentId}#${conceptId}`
+  documentId: string;
+  conceptId: string;
+  conceptName: string;
+  isFundamental: boolean;
+  algorithm: 'FSRS-7';
+  algorithmVersion: string; // Ex: "ts-fsrs@6.0.0 / FSRS-7"
+  desiredRetention: number; // Padrão: 0.90 (90%)
+  memoryState: FsrsMemoryState;
+  nextReviewDue: string;   // ISO UTC da próxima revisão
+  lastReviewedAt: string | null; // ISO UTC da última revisão
+  lastRating: FsrsRatingGrade | null;
+  totalReviews: number;
+  totalLapses: number;
+  historyLogs: ReviewLogEntry[];
+  createdAt: number;
+  updatedAt: number;
+  enrolledAt: number;      // Momento em que o estudante autorizou o agendamento
+}
+
+/**
+ * Resumo estatístico do painel longitudinal de recuperação.
+ */
+export interface LongitudinalReviewSummary {
+  documentId: string;
+  totalTrackedConcepts: number;
+  totalReviewsDone: number;
+  dueTodayCount: number;
+  overdueCount: number;
+  upcomingCount: number;
+  untrackedConceptsCount: number;
+  correctRetrievalRate: number; // (Good + Easy) / Total
+  averageEstimatedRetrievability: number; // Média da probabilidade teórica do modelo
+  ratingDistribution: {
+    again: number;
+    hard: number;
+    good: number;
+    easy: number;
+  };
+  conceptsBreakdown: Array<{
+    conceptId: string;
+    conceptName: string;
+    isFundamental: boolean;
+    status: 'overdue' | 'due_today' | 'upcoming' | 'untracked';
+    nextReviewDue: string | null;
+    daysOverdueOrRemaining: number;
+    estimatedRetrievability: number | null;
+    stabilityDays: number | null;
+    difficulty: number | null;
+    lastRating: FsrsRatingGrade | null;
+    totalReviews: number;
+    diagnosticState: DiagnosticState;
+    masteryLevel: MasteryLevel;
+  }>;
 }
