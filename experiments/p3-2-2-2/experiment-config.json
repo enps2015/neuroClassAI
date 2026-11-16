@@ -1,0 +1,26 @@
+{
+  "experimentId": "EXP-P3-2-2-2-GEMINI-REAL",
+  "name": "Experimento Controlado de Fundamentação Semântica com Gemini Real (Tier 2)",
+  "createdAt": "2026-11-16T10:58:00-03:00",
+  "targetModel": "gemini-3.5-flash-lite",
+  "sdk": "@google/genai@2.4.0",
+  "executionMode": "sequential_single_call",
+  "maxCallsAllowed": 21,
+  "retriesAllowed": false,
+  "datasetVersion": "1.0.0",
+  "datasetHash": "4620ef00e7e052c53f982aebc718ff5a8afba5f5cef003fc955000f12be83762",
+  "goldLabelsHash": "03e69a0d896e08b3e1bfd51b5141921c4fa2422c62e242bceb59396ae65f7124",
+  "outputMimeType": "application/json",
+  "delimitersStrategy": "safeJsonSerializeUntrustedData",
+  "decisionCriteria": {
+    "PROMISSOR": "Acurácia >= 70% E Macro-F1 >= 0.65 E Falsos Positivos de SUPPORTED <= 1",
+    "INSATISFATÓRIO": "Falsos Positivos de SUPPORTED >= 3 OU Macro-F1 < 0.50 OU Falhas Técnicas > 20%",
+    "INCONCLUSIVO": "Falhas Técnicas >= 4 OU Ambiguidade Crítica em >= 5 cenários"
+  },
+  "pricingAssumptions": {
+    "currency": "USD",
+    "model": "gemini-3.5-flash-lite",
+    "promptPricePerMillion": 0.075,
+    "candidatePricePerMillion": 0.30
+  }
+}

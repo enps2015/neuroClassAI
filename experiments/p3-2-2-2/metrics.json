@@ -1,0 +1,10 @@
+{
+  "executedAt": "2026-11-16T16:22:47.781Z",
+  "totalCases": 21,
+  "statusMatches": 13,
+  "accuracyPercent": 61.9,
+  "relationMatches": 12,
+  "relationAccuracyPercent": 57.14,
+  "avgLatencyMs": 1584,
+  "totalTokens": 28736
+}
