@@ -14,6 +14,7 @@ import {
   Award,
   Layers,
   RotateCcw,
+  Palette,
 } from 'lucide-react';
 import type {
   Concept,
@@ -26,6 +27,7 @@ import type {
   LearningAttempt,
   LearningSession,
   MasteryLevel,
+  VisualResource,
 } from '../../types';
 import {
   CREAR_STAGES,
@@ -40,12 +42,16 @@ import {
   getConceptMastery,
   saveLearningSession,
 } from '../../services/persistence/indexedDb';
+import { workspaceStorage } from '../../services/storage/workspaceStorage';
+import { visualLearningService } from '../../services/visual/visualLearningService';
 import { getDiagnosticStateMeta, getMasteryLevelMeta } from '../../utils/pedagogicalLabels';
 import { CrearContextualizeView } from './CrearContextualizeView';
 import { CrearRelateView } from './CrearRelateView';
 import { CrearExplainView } from './CrearExplainView';
 import { CrearApplyView } from './CrearApplyView';
 import { CrearRecoverView } from './CrearRecoverView';
+import { VisualSupportViewerModal } from '../visual/VisualSupportViewerModal';
+import { FeatureHelp } from '../onboarding/FeatureHelp';
 
 interface CrearCycleModalProps {
   isOpen: boolean;
@@ -56,6 +62,7 @@ interface CrearCycleModalProps {
   analysis: LearningAnalysis | null;
   documentExcerpts?: string[];
   onConceptMasteryChanged?: (conceptId: string, updatedMastery: ConceptMastery) => void;
+  onOpenGuide?: () => void;
 }
 
 export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
@@ -67,12 +74,50 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
   analysis,
   documentExcerpts = [],
   onConceptMasteryChanged,
+  onOpenGuide,
 }) => {
   const [selectedConcept, setSelectedConcept] = useState<Concept | null>(concept);
   const [session, setSession] = useState<LearningSession | null>(null);
   const [progress, setProgress] = useState<CrearCycleProgress | null>(null);
   const [mastery, setMastery] = useState<ConceptMastery | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [visualResources, setVisualResources] = useState<VisualResource[]>([]);
+  const [isVisualViewerOpen, setIsVisualViewerOpen] = useState(false);
+  const [visualViewerMeta, setVisualViewerMeta] = useState<{ stageName: string; stageNote: string }>({
+    stageName: '',
+    stageNote: '',
+  });
+
+  // Carregar recursos visuais de apoio para o conceito selecionado
+  useEffect(() => {
+    let isMounted = true;
+    if (selectedConcept) {
+      visualLearningService
+        .getVisualSupportForConcept(
+          selectedConcept.id,
+          selectedConcept.name,
+          document?.id,
+          document?.title,
+          false
+        )
+        .then(res => {
+          if (isMounted) setVisualResources(res);
+        })
+        .catch(() => {
+          if (isMounted) setVisualResources([]);
+        });
+    } else {
+      setVisualResources([]);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedConcept?.id, document?.id]);
+
+  const handleOpenVisualSupport = (stageName: string, stageNote: string) => {
+    setVisualViewerMeta({ stageName, stageNote });
+    setIsVisualViewerOpen(true);
+  };
 
   // Sincronizar conceito externo quando modal abrir
   useEffect(() => {
@@ -131,7 +176,7 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
         setProgress(advancedSession.crearCycle);
       }
 
-      await saveLearningSession(advancedSession);
+      await workspaceStorage.saveLearningSession(advancedSession, document?.subject || 'Geral');
     },
     [session]
   );
@@ -148,7 +193,7 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
         setProgress(updatedSession.crearCycle);
       }
 
-      await saveLearningSession(updatedSession);
+      await workspaceStorage.saveLearningSession(updatedSession, document?.subject || 'Geral');
     },
     [session, progress]
   );
@@ -172,7 +217,7 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
     if (completedSession.crearCycle) {
       setProgress(completedSession.crearCycle);
     }
-    await saveLearningSession(completedSession);
+    await workspaceStorage.saveLearningSession(completedSession, document?.subject || 'Geral');
     onClose();
   }, [session, onClose]);
 
@@ -203,6 +248,7 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
                   <span className="text-[10px] font-mono uppercase bg-cyan-950/80 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800/60 font-semibold">
                     Neurociência da Aprendizagem
                   </span>
+                  <FeatureHelp featureKey="crear_cycle" onOpenFullGuide={onOpenGuide} buttonSize="xs" />
                 </div>
                 <p className="text-xs text-slate-400">
                   Percurso cognitivo: Contextualizar · Relacionar · Explicar · Aplicar · Recuperar
@@ -228,6 +274,25 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
                   ))}
                 </select>
               </div>
+
+              {/* Botão de Apoio Visual Didático (disponível quando houver recursos e fora do teste cego de recuperação) */}
+              {visualResources.length > 0 && currentStage !== 'recover' && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleOpenVisualSupport(
+                      `C.R.E.A.R. — ${CREAR_STAGE_META[currentStage].title}`,
+                      'Consulte a ilustração iconográfica como modelo mental de apoio sem substituir seu raciocínio autônomo.'
+                    )
+                  }
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white rounded-lg border border-amber-800/40 text-xs font-semibold transition-all cursor-pointer shadow-sm"
+                  title="Consultar recursos visuais de apoio para este estágio"
+                >
+                  <Palette className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Apoio Visual</span>
+                  <span>({visualResources.length})</span>
+                </button>
+              )}
 
               <button
                 onClick={onClose}
@@ -328,6 +393,13 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
                   document={document}
                   documentExcerpts={documentExcerpts}
                   isCompleted={completedStages.includes('contextualize')}
+                  visualResources={visualResources}
+                  onOpenVisualSupport={() =>
+                    handleOpenVisualSupport(
+                      'C.R.E.A.R. — Contextualizar',
+                      'Consulte a ilustração didática para contextualizar espacialmente e estruturalmente o conceito estudado.'
+                    )
+                  }
                   onCompleteAndAdvance={() =>
                     handleStageCompleteAndAdvance('contextualize', {
                       viewedAt: Date.now(),
@@ -341,6 +413,13 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
                   concept={selectedConcept}
                   analysis={analysis}
                   isCompleted={completedStages.includes('relate')}
+                  visualResources={visualResources}
+                  onOpenVisualSupport={() =>
+                    handleOpenVisualSupport(
+                      'C.R.E.A.R. — Relacionar',
+                      'Utilize a representação visual dos componentes e setas direcionais para identificar conexões causais e regulatórias com outros conceitos.'
+                    )
+                  }
                   onCompleteAndAdvance={() =>
                     handleStageCompleteAndAdvance('relate', {
                       completedAt: Date.now(),
@@ -356,6 +435,13 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
                   documentExcerpts={documentExcerpts}
                   sessionId={session.id}
                   isCompleted={completedStages.includes('explain')}
+                  visualResources={visualResources}
+                  onOpenVisualSupport={() =>
+                    handleOpenVisualSupport(
+                      'C.R.E.A.R. — Explicar',
+                      'Recurso de apoio iconográfico: utilize para recordar a estrutura do conceito, mas redija a explicação com suas próprias palavras para consolidação autônoma.'
+                    )
+                  }
                   onCompleteAndAdvance={() =>
                     handleStageCompleteAndAdvance('explain', {
                       completedAt: Date.now(),
@@ -372,6 +458,13 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
                   documentExcerpts={documentExcerpts}
                   sessionId={session.id}
                   isCompleted={completedStages.includes('apply')}
+                  visualResources={visualResources}
+                  onOpenVisualSupport={() =>
+                    handleOpenVisualSupport(
+                      'C.R.E.A.R. — Aplicar',
+                      'Utilize o diagrama do mecanismo como referência para interpretar como o conceito atua nesta situação concreta.'
+                    )
+                  }
                   onCompleteAndAdvance={() =>
                     handleStageCompleteAndAdvance('apply', {
                       completedAt: Date.now(),
@@ -388,6 +481,13 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
                   documentExcerpts={documentExcerpts}
                   sessionId={session.id}
                   isCompleted={completedStages.includes('recover')}
+                  visualResources={visualResources}
+                  onOpenVisualSupport={() =>
+                    handleOpenVisualSupport(
+                      'C.R.E.A.R. — Recuperar',
+                      'Pista visual pós-recuperação: compare a estrutura iconográfica com o que você acabou de evocar da memória para consolidar as vias neurais de recuperação.'
+                    )
+                  }
                   onCycleCompleted={handleFinalizeCycle}
                   onAttemptCompleted={(attempt, updatedMastery) => {
                     handleAttemptCompleted(attempt, updatedMastery);
@@ -401,6 +501,17 @@ export const CrearCycleModal: React.FC<CrearCycleModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Visualizador de Apoio Didático (sem consumo de cota ou geração adicional) */}
+      <VisualSupportViewerModal
+        isOpen={isVisualViewerOpen}
+        onClose={() => setIsVisualViewerOpen(false)}
+        conceptName={selectedConcept.name}
+        resources={visualResources}
+        stageName={visualViewerMeta.stageName}
+        stageNote={visualViewerMeta.stageNote}
+        documentTitle={document?.title}
+      />
     </div>
   );
 };

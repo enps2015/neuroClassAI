@@ -14,6 +14,8 @@ import {
   Award,
   Loader2,
   Lightbulb,
+  Palette,
+  Eye,
 } from 'lucide-react';
 import type {
   Concept,
@@ -23,8 +25,10 @@ import type {
   ConceptMastery,
   DiagnosticState,
   MasteryLevel,
+  VisualResource,
 } from '../../types';
 import { requestConceptQuestion, requestExplanationEvaluation } from '../../services/ai/aiClient';
+import { workspaceStorage } from '../../services/storage/workspaceStorage';
 import {
   saveLearningAttempt,
   saveConceptMastery,
@@ -46,6 +50,8 @@ interface CrearExplainViewProps {
   isCompleted: boolean;
   onCompleteAndAdvance: () => void;
   onAttemptCompleted: (attempt: LearningAttempt, mastery: ConceptMastery) => void;
+  visualResources?: VisualResource[];
+  onOpenVisualSupport?: () => void;
 }
 
 export const CrearExplainView: React.FC<CrearExplainViewProps> = ({
@@ -56,6 +62,8 @@ export const CrearExplainView: React.FC<CrearExplainViewProps> = ({
   isCompleted,
   onCompleteAndAdvance,
   onAttemptCompleted,
+  visualResources = [],
+  onOpenVisualSupport,
 }) => {
   const [question, setQuestion] = useState<string>('');
   const [contextTip, setContextTip] = useState<string>('');
@@ -188,8 +196,8 @@ export const CrearExplainView: React.FC<CrearExplainViewProps> = ({
       );
 
       await Promise.all([
-        saveLearningAttempt(newAttempt),
-        saveConceptMastery(updatedMastery),
+        workspaceStorage.saveLearningAttempt(newAttempt, document.subject || 'Geral'),
+        workspaceStorage.saveLearningProgress(updatedMastery, undefined, document.subject || 'Geral'),
       ]);
 
       setAttempts(updatedAttempts);
@@ -293,9 +301,22 @@ export const CrearExplainView: React.FC<CrearExplainViewProps> = ({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">
-              Sua Explicação Científica ({studentExplanation.split(/\s+/).filter(Boolean).length} palavras):
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-300">
+                Sua Explicação Científica ({studentExplanation.split(/\s+/).filter(Boolean).length} palavras):
+              </label>
+              {visualResources.length > 0 && (
+                <button
+                  type="button"
+                  onClick={onOpenVisualSupport}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white rounded-lg text-[11px] font-medium border border-cyan-800/40 transition-colors cursor-pointer"
+                  title="Consultar recurso visual de apoio durante a formulação da explicação"
+                >
+                  <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Consultar Apoio Visual ({visualResources.length})</span>
+                </button>
+              )}
+            </div>
             <textarea
               value={studentExplanation}
               onChange={e => setStudentExplanation(e.target.value)}

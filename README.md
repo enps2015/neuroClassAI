@@ -12,12 +12,13 @@ A plataforma opera em arquitetura full-stack integrada (TypeScript):
 
 - **Frontend:** React 19, Vite 8, Tailwind CSS 4, Motion, Lucide Icons, PDF.js (`pdfjs-dist@4.10.38`), IDB (`idb@8`).
   - **Quadro Didático (SVG):** Visualização concêntrica com alternância entre Rede Conceitual e DAG de Pré-requisitos.
-  - **Tutor Cognitivo:** Assistente socrático contextualizado com enriquecimento pedagógico (analogias, exemplos aplicados, perguntas formativas).
+  - **Tutor Cognitivo com Voz Multimodal:** Assistente socrático contextualizado com diálogo bidirecional por texto e voz (STT contínuo, fallback de gravação via MediaRecorder e transcrição Gemini, VU meter de headset, síntese TTS a 1.15x com seletor de velocidade e sanitização estrita de Markdown/LaTeX/emojis).
   - **Caderno de Estudos:** Anotações sincronizadas com trechos literais e páginas de documentos.
   - **Persistência Local (IndexedDB):** Stores dedicadas (`documents`, `analyses`, `notes`, `chat_sessions`, `file_blobs`) com cálculo pré-transacional de cota e exportação JSON.
   - **Resiliência de Cliente:** Padrão *Circuit Breaker* (`AIServiceHealth`) com backoff exponencial e proteção contra sobrecarga de cota.
 - **Backend:** Node.js, Express 4, `@google/genai` (SDK oficial).
-  - Intermediação segura de todas as chamadas de IA.
+  - Intermediação segura de todas as chamadas de IA (BYOK-only em produção).
+  - Proxy streaming de síntese de voz `/api/voice/tts` (Google Cloud Neural2 + fallback universal sem dependências externas) e endpoint multimodal `/api/voice/transcribe`.
   - Failover automático multi-modelo: `gemini-3.8-flash` (primário) ➔ `gemini-3.5-flash` ➔ `gemini-3.1-flash-lite`.
   - Servidor dedicado para o worker do PDF.js com cabeçalho estrito de JavaScript (`application/javascript`).
   - Suporte a payload multimodal ampliado para documentos extensos (300+ páginas).
@@ -94,11 +95,11 @@ A chave de acesso à API do Gemini deve permanecer **exclusivamente no ambiente 
   ```
   Inicia o servidor de produção compilado (`node server.js`), servindo os arquivos estáticos de `dist/` e os endpoints de API.
 
-- **Suíte de Testes Unitários:**
+- **Suíte de Testes Automatizados:**
   ```bash
   npm test
   ```
-  Executa a suíte de testes de integridade e regressão via runner nativo do Node.js (`src/tests/phase1.test.ts`).
+  Executa a suíte de testes de integridade, regressão, BYOK e onboarding via runner nativo do Node.js (`src/tests/*.test.ts`).
 
 - **Limpeza de Artefatos Compilados:**
   ```bash
@@ -110,5 +111,17 @@ A chave de acesso à API do Gemini deve permanecer **exclusivamente no ambiente 
 
 ## 6. Documentação Técnica Homologada
 
-- [Relatório de Homologação da Fase 1 (06/11/2026)](docs/Relatorio_Fase1_NeuroClass_AI_2026-11-06.md)
-- [Especificação Arquitetural e Grafo Epistemológico (v2.2)](docs/fase1_implementation_plan_revisado2.md)
+- **[Dossier Técnico Completo e Handoff do Projeto](docs/NEUROCLASS_AI_PROJECT_DOSSIER.md)** *(Documento canônico consolidado com arquitetura, auditoria, experimento real Tier 2 e roadmap técnico)*
+- [Índice Geral de Documentação Técnica](docs/README.md)
+- [Índice de Relatórios Técnicos e Homologações](docs/relatorios/README.md)
+- [Relatório de Homologação da Fase 1 (06/11/2026)](docs/relatorios/Relatorio_Fase1_NeuroClass_AI_2026-11-06.md)
+- [Relatório de Segurança e Homologação da Fase 2 (BYOK-Only)](docs/relatorios/relatorio_bloqueio_modo_administrado_producao.md)
+- [Relatório de Homologação: Interação por Voz, Acessibilidade e Tutoria Ativa](docs/relatorios/relatorio_homologacao_interacao_voz_e_acessibilidade.md)
+- [Especificação Arquitetural e Grafo Epistemológico (v2.2)](docs/planos/fase1_implementation_plan_revisado2.md)
+- [Catálogo de Evidências Visuais da Jornada](docs/evidencias/README.md)
+
+### Status do Projeto (Novembro/2026)
+- **Fase 1 (Preservação e Grafo Epistemológico):** 100% homologada e estável em produção.
+- **Fase 2 (Aprendizagem Cognitiva & Metacognição C.R.E.A.R.):** Funcional e integrada com BYOK em modo de desenvolvimento.
+- **Tier 1 (Grounding Determinístico):** Em produção com verificação exata de citações e tolerância zero a fabricações.
+- **Tier 2 (Avaliador Semântico com IA):** Protótipo experimental validado contra Golden Dataset com IA real (`gemini-3.5-flash-lite`), demonstrando 100% de segurança contra alucinações (zero falsos positivos). Detalhes no [Dossier Técnico](docs/NEUROCLASS_AI_PROJECT_DOSSIER.md).

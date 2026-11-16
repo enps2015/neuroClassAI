@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Upload, FileText, CheckCircle, AlertTriangle, Loader2, BookOpen, Layers } from 'lucide-react';
 import { extractPdfDocument, inspectPdfOverview, safeBufferToBase64 } from '../../services/documents/pdfService';
 import type { DocumentSource, TableOfContentsItem } from '../../types';
+import { FeatureHelp } from '../onboarding/FeatureHelp';
 
 interface DocumentUploadModalProps {
   isOpen: boolean;
@@ -146,8 +147,20 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
         let base64Data: string | undefined = undefined;
         const isFileSizeSmall = selectedFile.size <= 15 * 1024 * 1024;
 
+        if (extracted.isScannedDocument && !isFileSizeSmall) {
+          setErrorMsg(
+            'Documento digitalizado (scanned) sem camada de texto excede o limite seguro de 15MB para transmissão direta. Selecione um capítulo ou bloco de páginas para análise.'
+          );
+          setIsProcessing(false);
+          return;
+        }
+
         if (isFileSizeSmall && !isChunked) {
-          setProgressMsg('Codificando documento para visão multimodal...');
+          setProgressMsg(
+            extracted.isScannedDocument
+              ? 'Codificando páginas digitalizadas para visão multimodal de IA...'
+              : 'Codificando documento para visão multimodal...'
+          );
           base64Data = safeBufferToBase64(arrayBuffer);
         }
 
@@ -234,7 +247,10 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
         {/* Header do Modal */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
           <div>
-            <h3 className="text-base font-semibold text-white">Importar Material de Estudo</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-white">Importar Material de Estudo</h3>
+              <FeatureHelp featureKey="document_import" buttonSize="xs" />
+            </div>
             <p className="text-xs text-slate-400 mt-0.5">
               PDFs com visão multimodal, suporte a documentos extensos (&gt;300 págs.) e anotações.
             </p>

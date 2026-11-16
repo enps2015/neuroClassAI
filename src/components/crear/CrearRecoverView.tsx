@@ -13,6 +13,8 @@ import {
   PartyPopper,
   ShieldAlert,
   Clock,
+  Palette,
+  Eye,
 } from 'lucide-react';
 import type {
   Concept,
@@ -20,8 +22,10 @@ import type {
   ExplanationFeedback,
   LearningAttempt,
   ConceptMastery,
+  VisualResource,
 } from '../../types';
 import { requestConceptQuestion, requestExplanationEvaluation } from '../../services/ai/aiClient';
+import { workspaceStorage } from '../../services/storage/workspaceStorage';
 import {
   saveLearningAttempt,
   saveConceptMastery,
@@ -40,6 +44,8 @@ interface CrearRecoverViewProps {
   isCompleted: boolean;
   onCycleCompleted: () => void;
   onAttemptCompleted: (attempt: LearningAttempt, mastery: ConceptMastery) => void;
+  visualResources?: VisualResource[];
+  onOpenVisualSupport?: () => void;
 }
 
 export const CrearRecoverView: React.FC<CrearRecoverViewProps> = ({
@@ -50,6 +56,8 @@ export const CrearRecoverView: React.FC<CrearRecoverViewProps> = ({
   isCompleted,
   onCycleCompleted,
   onAttemptCompleted,
+  visualResources = [],
+  onOpenVisualSupport,
 }) => {
   const [retrievalQuestion, setRetrievalQuestion] = useState<string>('');
   const [contextTip, setContextTip] = useState<string>('');
@@ -191,8 +199,8 @@ export const CrearRecoverView: React.FC<CrearRecoverViewProps> = ({
       );
 
       await Promise.all([
-        saveLearningAttempt(newAttempt),
-        saveConceptMastery(updatedMastery),
+        workspaceStorage.saveLearningAttempt(newAttempt, document.subject || 'Geral'),
+        workspaceStorage.saveLearningProgress(updatedMastery, undefined, document.subject || 'Geral'),
       ]);
 
       setAttempts(updatedAttempts);
@@ -367,6 +375,29 @@ export const CrearRecoverView: React.FC<CrearRecoverViewProps> = ({
                   </ul>
                 </div>
               </div>
+
+              {/* Pista Visual Didática Pós-Recuperação (Disponível estritamente após tentativa autônoma) */}
+              {visualResources.length > 0 && (
+                <div className="p-4 bg-slate-900/90 border border-rose-800/40 rounded-xl space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-rose-300 flex items-center gap-1.5">
+                      <Palette className="w-3.5 h-3.5 text-rose-400" />
+                      Pista Visual Didática Pós-Recuperação ({visualResources.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={onOpenVisualSupport}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-all cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Revelar Pista Visual para Consolidação</span>
+                    </button>
+                  </div>
+                  <p className="text-[11.5px] text-slate-300 leading-relaxed">
+                    Compare a sua reconstrução mental evocada com a representação iconográfica do conceito para reforçar as vias de consolidação duradoura.
+                  </p>
+                </div>
+              )}
 
               {/* Notificação de Conclusão do Ciclo C.R.E.A.R. */}
               <div className="p-4 bg-gradient-to-r from-violet-950/40 to-cyan-950/40 border border-cyan-500/30 rounded-xl space-y-3">

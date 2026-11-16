@@ -3,7 +3,21 @@
  * Rastreabilidade epistemológica, referências polimórficas, grafo conceitual e avaliação formativa C.R.E.A.R.
  */
 
-export type EvidenceSourceType = 'pdf_page' | 'note_section' | 'figure' | 'table';
+import type { GroundingSegment } from './rag';
+export type {
+  GroundingSegment,
+  GroundingAssessment,
+  GroundingSegmentCheckDetails,
+  TutorResponseGroundingResult,
+  SemanticSupportLevel,
+  SemanticRelationType,
+  SemanticClaimAssessment,
+  SemanticOverallStatus,
+  SemanticEvaluationResponse,
+  SemanticEvaluationRequest,
+} from './rag';
+
+export type EvidenceSourceType = 'pdf_page' | 'note_section' | 'figure' | 'table' | 'formula' | 'chart';
 
 export interface BaseEvidenceReference {
   id: string;
@@ -39,11 +53,35 @@ export interface TableEvidence extends BaseEvidenceReference {
   columnHeader?: string;
 }
 
+export interface FormulaEvidence extends BaseEvidenceReference {
+  type: 'formula';
+  formulaExpression: string; // Ex.: "E = h \nu" ou "K_{max} = h\nu - \Phi"
+  formulaLabel?: string;     // Ex.: "Equação 1.1"
+  pageNumber?: number;
+  variableDefinitions?: Record<string, string>;
+  isAmbiguous?: boolean;
+  ambiguityReason?: string;
+}
+
+export interface ChartEvidence extends BaseEvidenceReference {
+  type: 'chart';
+  chartLabel?: string;       // Ex.: "Gráfico 1"
+  pageNumber?: number;
+  chartType?: 'line' | 'bar' | 'scatter' | 'histogram' | 'pie' | 'other';
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  observedTrend?: string;
+  isAmbiguous?: boolean;
+  ambiguityReason?: string;
+}
+
 export type EvidenceReference =
   | PdfPageEvidence
   | NoteSectionEvidence
   | FigureEvidence
-  | TableEvidence;
+  | TableEvidence
+  | FormulaEvidence
+  | ChartEvidence;
 
 /**
  * Classificação epistemológica da informação.
@@ -118,7 +156,8 @@ export interface ConceptRelationship {
 
 export interface TableOfContentsItem {
   title: string;
-  pageNumber: number; // Numeração original real
+  pageNumber?: number; // Numeração original física real do PDF (1-indexed), quando resolvida
+  pageLabel?: string;  // Rótulo da página impressa (ex: "i", "iv", "1"), quando disponível
   level: number;
   subItems?: TableOfContentsItem[];
 }
@@ -127,6 +166,64 @@ export interface DocumentPage {
   pageNumber: number;
   textContent: string;
   hasVisualElements: boolean;
+  isScanned?: boolean;
+  legibility?: 'clean' | 'scanned_image' | 'hybrid' | 'degraded';
+  detectedElements?: {
+    hasFormulas?: boolean;
+    hasTables?: boolean;
+    hasFigures?: boolean;
+    hasCharts?: boolean;
+  };
+  pageImageBase64?: string;
+}
+
+export interface ProcessingCoverage {
+  mode: 'full' | 'chunk' | 'sampled' | 'scanned_multimodal';
+  totalPages: number;
+  processedPages: number[];
+  sampledPages?: number[];
+  unprocessedPages?: number[];
+  scannedPages?: number[];
+  coveragePercentage: number;
+  legibilitySummary: {
+    isFullyDigital: boolean;
+    scannedPageCount: number;
+    degradedPageCount: number;
+    averageDensityCharsPerPage: number;
+    warnings: string[];
+  };
+}
+
+export interface MultimodalAssetRegistry {
+  figures: Array<{
+    label: string;
+    caption?: string;
+    pageNumber: number;
+    description?: string;
+  }>;
+  tables: Array<{
+    label: string;
+    caption?: string;
+    pageNumber: number;
+    headers?: string[];
+    summary?: string;
+  }>;
+  formulas: Array<{
+    label?: string;
+    expression: string;
+    pageNumber: number;
+    meaning?: string;
+    isAmbiguous?: boolean;
+    ambiguityReason?: string;
+  }>;
+  charts: Array<{
+    label?: string;
+    pageNumber: number;
+    chartType?: string;
+    axes?: { x?: string; y?: string };
+    trend?: string;
+    isAmbiguous?: boolean;
+  }>;
 }
 
 export interface DocumentSource {
@@ -139,11 +236,17 @@ export interface DocumentSource {
   mimeType: string;
   uploadedAt: number;
   pageCount?: number;
+  academicArea?: string; // Área acadêmica (ex: 'Ciências Biológicas e Saúde', 'Engenharias e Tecnologia')
+  bibliographicReferences?: string[]; // Referências bibliográficas reais do material
   tableOfContents?: TableOfContentsItem[];
   activeChunkRange?: { startPage: number; endPage: number };
   pages?: DocumentPage[];
   noteSections?: Array<{ title: string; content: string }>;
   storageRef?: string; // ID da chave de armazenamento IndexedDB
+  ragStatus?: 'pending' | 'extracting' | 'processing' | 'indexed' | 'completed_partial_ocr_pending' | 'failed';
+  ragIndexingState?: any;
+  ragIndexedChunksCount?: number;
+  ragIndexedAt?: number;
 }
 
 export interface LearningAnalysis {
@@ -162,6 +265,8 @@ export interface LearningAnalysis {
   identifiedGaps: string[];
   suggestedDiagramType: 'concept-map' | 'process-flow' | 'comparative' | 'hierarchy';
   analyzedAt: number;
+  coverage?: ProcessingCoverage;
+  multimodalAssets?: MultimodalAssetRegistry;
 }
 
 export interface TutorChatMessage {
@@ -171,7 +276,13 @@ export interface TutorChatMessage {
   timestamp: number;
   contextConceptId?: string;
   evidencesCited?: EvidenceReference[];
+  verifiedCitations?: EvidenceReference[];
+  unverifiedCitations?: string[];
+  retrievedEvidenceCount?: number;
   pedagogicalRole?: 'explanation' | 'diagnostic_question' | 'analogy' | 'practical_example' | 'clarification';
+  groundingSegments?: GroundingSegment[];
+  evaluationHandle?: string;
+  semanticEvaluation?: SemanticEvaluationResponse;
 }
 
 export interface StudyNote {
@@ -184,6 +295,9 @@ export interface StudyNote {
   associatedConceptId?: string;
   citedExcerpt?: string;
   pageSource?: number;
+  pageSources?: number[];
+  verifiedCitations?: EvidenceReference[];
+  associatedVisualResourceId?: string;
 }
 
 export interface ServiceHealthStatus {
@@ -558,4 +672,50 @@ export interface LongitudinalReviewSummary {
     diagnosticState: DiagnosticState;
     masteryLevel: MasteryLevel;
   }>;
+}
+
+/**
+ * Missão Visual Learning v1 — Modalidades de Recursos Visuais Didáticos
+ */
+export type VisualModality = 'conceptual_illustration' | 'visual_analogy' | 'process_mechanism';
+
+export interface VisualResource {
+  id: string;                      // Identificador único (ex: vis_${Date.now()}_...)
+  documentId: string;              // Documento de origem
+  conceptId: string;               // Conceito estudado
+  conceptName: string;             // Nome do conceito
+  modality: VisualModality;        // Modalidade de ilustração
+  title: string;                   // Título didático (apresentado fora da imagem)
+  caption: string;                 // Legenda explicativa (apresentada fora da imagem)
+  promptUsed: string;              // Prompt descritivo utilizado para a geração
+  imageDataUrl: string;            // Imagem em formato data URL base64
+  mimeType: string;                // Ex: 'image/jpeg' ou 'image/png'
+  referenceExcerpts?: string[];    // Trechos de evidência documental citados
+  modelUsed: string;               // Modelo utilizado (ex: 'gemini-3.1-flash-lite-image')
+  createdAt: number;               // Timestamp de criação
+}
+
+export interface VisualGenerationRequest {
+  documentId: string;
+  conceptId: string;
+  conceptName: string;
+  conceptDefinition: string;
+  documentTitle: string;
+  subject?: string;
+  modality: VisualModality;
+  evidenceExcerpts?: string[];
+  relatedConcepts?: string[];
+  confirmCostConsent: boolean;     // Confirmação explícita obrigatória do estudante
+  isDemoMaterial?: boolean;        // Indica se o material em estudo é da biblioteca demo
+}
+
+export interface VisualGenerationResponse {
+  imageDataUrl: string;
+  title: string;
+  caption: string;
+  modality: VisualModality;
+  conceptName: string;
+  modelUsed: string;
+  promptUsed: string;
+  referenceExcerpts?: string[];
 }

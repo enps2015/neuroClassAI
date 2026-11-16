@@ -10,8 +10,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Sparkles,
+  Palette,
+  Eye,
 } from 'lucide-react';
-import type { Concept, ConceptRelationship, LearningAnalysis, RelationshipType } from '../../types';
+import type { Concept, ConceptRelationship, LearningAnalysis, RelationshipType, VisualResource } from '../../types';
 import { extractConceptRelations } from '../../services/learning/crearCycleService';
 
 interface CrearRelateViewProps {
@@ -19,6 +21,8 @@ interface CrearRelateViewProps {
   analysis: LearningAnalysis | null;
   isCompleted: boolean;
   onCompleteAndAdvance: () => void;
+  visualResources?: VisualResource[];
+  onOpenVisualSupport?: () => void;
 }
 
 const RELATION_TYPE_META: Record<RelationshipType, { label: string; color: string; desc: string }> = {
@@ -59,6 +63,8 @@ export const CrearRelateView: React.FC<CrearRelateViewProps> = ({
   analysis,
   isCompleted,
   onCompleteAndAdvance,
+  visualResources = [],
+  onOpenVisualSupport,
 }) => {
   const { prerequisites, outgoingRelations, incomingRelations } = extractConceptRelations(
     concept.id,
@@ -247,6 +253,29 @@ export const CrearRelateView: React.FC<CrearRelateViewProps> = ({
             </button>
           </div>
           <p className="text-xs text-indigo-200 leading-relaxed">{inspectedConcept.definition}</p>
+        </div>
+      )}
+
+      {/* Apoio Visual das Relações (Opcional) */}
+      {visualResources.length > 0 && (
+        <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-xl space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-violet-400" />
+              Apoio Visual das Relações ({visualResources.length})
+            </span>
+            <button
+              type="button"
+              onClick={onOpenVisualSupport}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-violet-300 hover:text-white text-xs font-semibold rounded-lg border border-violet-800/50 transition-colors cursor-pointer"
+            >
+              <Eye className="w-3.5 h-3.5 text-violet-400" />
+              <span>Consultar Apoio Visual para Relações</span>
+            </button>
+          </div>
+          <p className="text-[11.5px] text-slate-400 leading-relaxed">
+            Utilize a ilustração iconográfica e suas relações vetoriais para visualizar as interações causais e regulatórias com outros conceitos.
+          </p>
         </div>
       )}
 

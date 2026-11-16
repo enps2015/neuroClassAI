@@ -12,6 +12,8 @@ import {
   Lightbulb,
   FileQuestion,
   Stethoscope,
+  Palette,
+  Eye,
 } from 'lucide-react';
 import type {
   Concept,
@@ -19,8 +21,10 @@ import type {
   ExplanationFeedback,
   LearningAttempt,
   ConceptMastery,
+  VisualResource,
 } from '../../types';
 import { requestConceptQuestion, requestExplanationEvaluation } from '../../services/ai/aiClient';
+import { workspaceStorage } from '../../services/storage/workspaceStorage';
 import {
   saveLearningAttempt,
   saveConceptMastery,
@@ -37,6 +41,8 @@ interface CrearApplyViewProps {
   isCompleted: boolean;
   onCompleteAndAdvance: () => void;
   onAttemptCompleted: (attempt: LearningAttempt, mastery: ConceptMastery) => void;
+  visualResources?: VisualResource[];
+  onOpenVisualSupport?: () => void;
 }
 
 export const CrearApplyView: React.FC<CrearApplyViewProps> = ({
@@ -47,6 +53,8 @@ export const CrearApplyView: React.FC<CrearApplyViewProps> = ({
   isCompleted,
   onCompleteAndAdvance,
   onAttemptCompleted,
+  visualResources = [],
+  onOpenVisualSupport,
 }) => {
   const [scenarioPrompt, setScenarioPrompt] = useState<string>('');
   const [contextTip, setContextTip] = useState<string>('');
@@ -174,8 +182,8 @@ export const CrearApplyView: React.FC<CrearApplyViewProps> = ({
       );
 
       await Promise.all([
-        saveLearningAttempt(newAttempt),
-        saveConceptMastery(updatedMastery),
+        workspaceStorage.saveLearningAttempt(newAttempt, document.subject || 'Geral'),
+        workspaceStorage.saveLearningProgress(updatedMastery, undefined, document.subject || 'Geral'),
       ]);
 
       setAttempts(updatedAttempts);
@@ -278,9 +286,22 @@ export const CrearApplyView: React.FC<CrearApplyViewProps> = ({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">
-              Sua Resolução Aplicada ({studentResponse.split(/\s+/).filter(Boolean).length} palavras):
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-300">
+                Sua Resolução Aplicada ({studentResponse.split(/\s+/).filter(Boolean).length} palavras):
+              </label>
+              {visualResources.length > 0 && (
+                <button
+                  type="button"
+                  onClick={onOpenVisualSupport}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-emerald-300 hover:text-white rounded-lg text-[11px] font-medium border border-emerald-800/40 transition-colors cursor-pointer"
+                  title="Consultar representação visual do mecanismo como referência para interpretar a situação prática"
+                >
+                  <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Apoio Visual do Mecanismo ({visualResources.length})</span>
+                </button>
+              )}
+            </div>
             <textarea
               value={studentResponse}
               onChange={e => setStudentResponse(e.target.value)}

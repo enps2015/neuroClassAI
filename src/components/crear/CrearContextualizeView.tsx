@@ -8,8 +8,10 @@ import {
   ArrowRight,
   CheckCircle2,
   Info,
+  Palette,
+  Eye,
 } from 'lucide-react';
-import type { Concept, DocumentSource } from '../../types';
+import type { Concept, DocumentSource, VisualResource } from '../../types';
 
 interface CrearContextualizeViewProps {
   concept: Concept;
@@ -17,6 +19,8 @@ interface CrearContextualizeViewProps {
   documentExcerpts?: string[];
   isCompleted: boolean;
   onCompleteAndAdvance: () => void;
+  visualResources?: VisualResource[];
+  onOpenVisualSupport?: () => void;
 }
 
 export const CrearContextualizeView: React.FC<CrearContextualizeViewProps> = ({
@@ -25,6 +29,8 @@ export const CrearContextualizeView: React.FC<CrearContextualizeViewProps> = ({
   documentExcerpts = [],
   isCompleted,
   onCompleteAndAdvance,
+  visualResources = [],
+  onOpenVisualSupport,
 }) => {
   return (
     <div className="space-y-6">
@@ -125,11 +131,18 @@ export const CrearContextualizeView: React.FC<CrearContextualizeViewProps> = ({
                 className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-lg space-y-1.5 hover:border-slate-700 transition-colors"
               >
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-mono text-cyan-400 font-semibold bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/40">
+                  <span className="font-mono text-cyan-400 font-semibold bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/40 flex items-center gap-1.5">
                     {ev.type === 'pdf_page' && `Página ${(ev as any).pageNumber}`}
-                    {ev.type === 'figure' && `${(ev as any).figureLabel} (Pág. ${(ev as any).pageNumber})`}
-                    {ev.type === 'table' && `${(ev as any).tableLabel} (Pág. ${(ev as any).pageNumber})`}
+                    {ev.type === 'figure' && `${(ev as any).figureLabel || 'Figura'} (Pág. ${(ev as any).pageNumber || 's/p'})`}
+                    {ev.type === 'table' && `${(ev as any).tableLabel || 'Tabela'} (Pág. ${(ev as any).pageNumber || 's/p'})`}
+                    {ev.type === 'formula' && `∑ Fórmula ${(ev as any).formulaLabel ? `(${(ev as any).formulaLabel})` : ''}: ${(ev as any).formulaExpression} (Pág. ${(ev as any).pageNumber || 's/p'})`}
+                    {ev.type === 'chart' && `📈 Gráfico ${(ev as any).chartLabel || ''} (Pág. ${(ev as any).pageNumber || 's/p'})`}
                     {ev.type === 'note_section' && `Seção "${(ev as any).sectionTitle}"`}
+                    {(ev as any).isAmbiguous && (
+                      <span className="px-1.5 py-0.5 bg-amber-950 text-amber-300 border border-amber-700/60 rounded text-[9px] font-sans">
+                        Leitura Ambígua
+                      </span>
+                    )}
                   </span>
                   <span className="text-slate-500 text-[10px]">Citação Literal</span>
                 </div>
@@ -157,6 +170,29 @@ export const CrearContextualizeView: React.FC<CrearContextualizeViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Apoio Visual Didático Contextual (Opcional) */}
+      {visualResources.length > 0 && (
+        <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-xl space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-amber-400" />
+              Apoio Visual Didático Contextual ({visualResources.length})
+            </span>
+            <button
+              type="button"
+              onClick={onOpenVisualSupport}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 hover:text-white text-xs font-semibold rounded-lg border border-amber-800/50 transition-colors cursor-pointer"
+            >
+              <Eye className="w-3.5 h-3.5 text-amber-400" />
+              <span>Consultar Ilustração Didática: {visualResources[0].title}</span>
+            </button>
+          </div>
+          <p className="text-[11.5px] text-slate-400 leading-relaxed">
+            Consulte a representação iconográfica para consolidar a ancoragem espacial e estrutural do conceito.
+          </p>
+        </div>
+      )}
 
       {/* Ação de Conclusão da Contextualização */}
       <div className="flex items-center justify-between pt-2">

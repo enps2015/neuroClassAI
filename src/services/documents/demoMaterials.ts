@@ -1,21 +1,39 @@
 import type { DocumentSource, LearningAnalysis } from '../../types';
 
 /**
- * Catálogo Imutável de Materiais de Demonstração Científica.
- * NOTA DE INTEGRIDADE EPISTEMOLÓGICA:
- * Estes materiais são demonstrações pedagógicas internas curadas para teste da plataforma,
- * NÃO devendo ser interpretados como artigos científicos externos avulsos.
- * Ficam 100% isolados do armazenamento IndexedDB pessoal do estudante.
+ * NeuroClass AI — Catálogo Multidisciplinar de Demonstração Científica.
+ * Representação curricular de sete grandes áreas acadêmicas para graduação e pós-graduação:
+ *
+ * 1. Ciências Biológicas e Saúde: Transmissão Sináptica e Plasticidade Neuronal (Kandel, Bear, Bliss & Collingridge)
+ * 2. Ciências Exatas e da Terra: Efeito Fotoelétrico e Quantização da Radiação (Einstein, Millikan, Tipler)
+ * 3. Engenharias e Tecnologia: Arquitetura de Redes Neurais Artificiais e Deep Learning (Goodfellow, Rumelhart, LeCun)
+ * 4. Ciências Humanas e Filosofia: Epistemologia e o Critério de Demarcação Científica (Popper, Kuhn, Chalmers)
+ * 5. Ciências Sociais: Estrutura Social, Ação Social e Tipos de Dominação (Weber, Durkheim, Giddens)
+ * 6. Educação e Psicologia: Teoria da Carga Cognitiva e Aprendizagem Significativa (Sweller, Ausubel, Mayer)
+ * 7. Administração e Economia: Racionalidade Limitada e Tomada de Decisão nas Organizações (Herbert A. Simon)
+ *
+ * NOTA DE INTEGRIDADE EPISTEMOLÓGICA & ISOLAMENTO:
+ * Todos os materiais utilizam fontes canônicas de domínio público ou publicações acadêmicas abertas,
+ * com referências bibliográficas reais, evidências citáveis e objetivos de aprendizagem formativos.
+ * O catálogo permanece 100% isolado do armazenamento IndexedDB pessoal do estudante.
  */
+
 export const DEMO_MATERIALS: Array<{
   document: DocumentSource;
   analysis: LearningAnalysis;
 }> = [
+  // 1. CIÊNCIAS BIOLÓGICAS E SAÚDE
   {
     document: {
       id: 'demo_neurobiology_synapse',
       title: 'Transmissão Sináptica e Plasticidade Neuronal',
       subject: 'Neurociência e Fisiologia Celular',
+      academicArea: 'Ciências Biológicas e Saúde',
+      bibliographicReferences: [
+        'Kandel, E. R., Schwartz, J. H., & Jessell, T. M. (2013). Principles of Neural Science (5th ed.). McGraw-Hill.',
+        'Bear, M. F., Connors, B. W., & Paradiso, M. A. (2017). Neurociências: Desvendando o Sistema Nervoso (4ª ed.). Artmed.',
+        'Bliss, T. V., & Collingridge, G. L. (1993). A synaptic model of memory: long-term potentiation in the hippocampus. Nature, 361(6407), 31-39.',
+      ],
       type: 'pdf',
       isDemoMaterial: true,
       sizeBytes: 1024 * 450,
@@ -75,6 +93,23 @@ export const DEMO_MATERIALS: Array<{
         'Mapear a transição da sinapse para plasticidade neuronal duradoura (LTP)',
       ],
       fundamentalConcepts: [
+        {
+          id: 'c_transmissao_sinaptica_quimica',
+          name: 'Transmissão Sináptica Química',
+          definition: 'Processo fisiológico unidirecional de transdução neuroquímica no qual a despolarização pré-sináptica promove influxo de Ca2+, exocitose vesicular e ativação de receptores na membrana pós-sináptica através da fenda sináptica.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_c0_syn',
+              type: 'pdf_page',
+              pageNumber: 2,
+              excerpt: 'A transmissão sináptica química é o mecanismo universal de comunicação interneuronal, mediado pela liberação quântica de neurotransmissores a partir de vesículas pré-sinápticas na fenda sináptica.',
+            },
+          ],
+          prerequisiteConceptIds: [],
+          diagnosticState: 'understood',
+        },
         {
           id: 'c_potencial_acao',
           name: 'Potencial de Ação Pré-Sináptico',
@@ -329,10 +364,17 @@ export const DEMO_MATERIALS: Array<{
     },
   },
   {
+    // 2. CIÊNCIAS EXATAS E DA TERRA
     document: {
       id: 'demo_quantum_photoelectric',
       title: 'Efeito Fotoelétrico e a Quantização da Radiação',
       subject: 'Física Moderna e Quântica',
+      academicArea: 'Ciências Exatas e da Terra',
+      bibliographicReferences: [
+        'Einstein, A. (1905). Über einen die Erzeugung und Verwandlung des Lichtes betreffenden heuristischen Gesichtspunkt. Annalen der Physik, 17(6), 132-148.',
+        'Millikan, R. A. (1916). A direct photoelectric determination of Planck\'s "h". Physical Review, 7(3), 355-388.',
+        'Tipler, P. A., & Llewellyn, R. A. (2012). Modern Physics (6th ed.). W. H. Freeman.',
+      ],
       type: 'pdf',
       isDemoMaterial: true,
       sizeBytes: 1024 * 380,
@@ -558,6 +600,1237 @@ export const DEMO_MATERIALS: Array<{
       ],
       suggestedDiagramType: 'concept-map',
       analyzedAt: 1730000110000,
+    },
+  },
+
+  // 3. ENGENHARIAS E TECNOLOGIA
+  {
+    document: {
+      id: 'demo_eng_deep_learning_architecture',
+      title: 'Arquitetura de Redes Neurais e Aprendizado Profundo',
+      subject: 'Inteligência Artificial e Ciência da Computação',
+      academicArea: 'Engenharias e Tecnologia',
+      bibliographicReferences: [
+        'Goodfellow, I., Bengio, Y., & Courville, A. (2016). Deep Learning. MIT Press.',
+        'Rumelhart, D. E., Hinton, G. E., & Williams, R. J. (1986). Learning representations by back-propagating errors. Nature, 323(6088), 533-536.',
+        'LeCun, Y., Bengio, Y., & Hinton, G. (2015). Deep learning. Nature, 521(7553), 436-444.',
+      ],
+      type: 'pdf',
+      isDemoMaterial: true,
+      sizeBytes: 1024 * 510,
+      mimeType: 'application/pdf',
+      uploadedAt: 1730000100000,
+      pageCount: 6,
+      tableOfContents: [
+        { title: '1. O Perceptron Multicamadas (MLP) e Representação Linear', pageNumber: 1, level: 0 },
+        { title: '2. Funções de Ativação Não-Lineares (Sigmoide, ReLU)', pageNumber: 2, level: 0 },
+        { title: '3. A Propagação Direta (Forward Pass) e Função de Custo', pageNumber: 3, level: 0 },
+        { title: '4. Algoritmo de Retropropagação (Backpropagation)', pageNumber: 4, level: 0 },
+        { title: '5. Otimização por Gradiente Descendente Estocástico (SGD)', pageNumber: 5, level: 0 },
+        { title: '6. Generalização, Overfitting e Regularização (Dropout)', pageNumber: 6, level: 0 },
+      ],
+      pages: [
+        {
+          pageNumber: 1,
+          textContent: 'O Perceptron Multicamadas (Multi-Layer Perceptron - MLP) é uma arquitetura de rede neural feedforward composta por uma camada de entrada, uma ou mais camadas ocultas e uma camada de saída. Cada neurônio computa uma combinação linear ponderada de suas entradas acrescida de um termo de polarização (bias): z = w·x + b.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 2,
+          textContent: 'Sem funções de ativação não lineares, uma rede neural de múltiplas camadas colapsaria matematicamente em uma simples transformação afim linear. Funções como a Sigmoide clássica (sigma(z) = 1 / (1 + e^-z)) e a Unidade Linear Retificada (ReLU, f(z) = max(0, z)) conferem à rede a capacidade de ser um aproximador universal de funções não lineares e atenuam o problema do gradiente evanescente.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 3,
+          textContent: 'Na propagação direta (forward pass), os tensores de ativação fluem sequencialmente da entrada à saída. A predição final y_hat é comparada com o rótulo verdadeiro y através de uma função de perda empírica, como o Erro Quadrático Médio (MSE) para regressão ou a Entropia Cruzada Categórica (Cross-Entropy Loss) para tarefas de classificação supervisionada.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 4,
+          textContent: 'O algoritmo de retropropagação (backpropagation) aplica sistematicamente a regra da cadeia do cálculo diferencial para computar as derivadas parciais da função de custo em relação a cada peso sináptico e viés da rede: dL/dw_ij = (dL/dz_j) · (dz_j/dw_ij). O gradiente do erro é propagado da camada de saída em direção às camadas de entrada.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 5,
+          textContent: 'Com os gradientes calculados, os pesos da rede são ajustados iterativamente via Gradiente Descendente Estocástico (SGD) ou variantes adaptativas (Adam, RMSProp). A regra de atualização básica w = w - eta · gradiente ajusta os parâmetros na direção oposta à maior inclinação da superfície de erro, com taxa de aprendizado (learning rate) eta controlando o tamanho do passo.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 6,
+          textContent: 'A capacidade excessiva de parametrização pode levar ao sobreajuste (overfitting), quando a rede memoriza ruídos dos dados de treino e falha em generalizar para o conjunto de teste. Estratégias de regularização como L2 (weight decay), parada precoce (early stopping) e dropout (desativação aleatória de frações de neurônios durante o treino) previnem a co-adaptação espúria de características.',
+          hasVisualElements: true,
+        },
+      ],
+    },
+    analysis: {
+      id: 'analysis_eng_deep_learning',
+      documentId: 'demo_eng_deep_learning_architecture',
+      domain: 'Engenharias e Tecnologia',
+      centralTheme: 'Fundamentos Algorítmicos e Matemáticos do Treinamento de Redes Neurais Profundas',
+      learningObjectives: [
+        'Compreender a formulação matemática da combinação linear ponderada e o papel das funções de ativação não lineares',
+        'Modelar o fluxo da propagação direta e a mensuração do erro por funções de perda (MSE e Entropia Cruzada)',
+        'Dominar a derivação do algoritmo de retropropagação do erro através da regra da cadeia',
+        'Analisar a dinâmica de convergência do gradiente descendente e os métodos de regularização contra o sobreajuste',
+      ],
+      fundamentalConcepts: [
+        {
+          id: 'c_mlp_representacao',
+          name: 'Perceptron Multicamadas (MLP)',
+          definition: 'Arquitetura feedforward de camadas densamente conectadas onde neurônios processam combinações afins dos dados de entrada.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_eng_1',
+              type: 'pdf_page',
+              pageNumber: 1,
+              excerpt: 'O Perceptron Multicamadas (Multi-Layer Perceptron - MLP) é uma arquitetura de rede neural feedforward composta por uma camada de entrada, uma ou mais camadas ocultas e uma camada de saída.',
+            },
+          ],
+          prerequisiteConceptIds: [],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_ativacao_nao_linear',
+          name: 'Funções de Ativação Não-Lineares',
+          definition: 'Transformações aplicadas à soma ponderada para permitir a representação de fronteiras de decisão complexas e não lineares.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_eng_2',
+              type: 'pdf_page',
+              pageNumber: 2,
+              excerpt: 'Sem funções de ativação não lineares, uma rede neural de múltiplas camadas colapsaria matematicamente em uma simples transformação afim linear.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_mlp_representacao'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_funcao_custo_forward',
+          name: 'Forward Pass e Função de Perda',
+          definition: 'Trajetória direta de cálculo da predição e quantificação do desvio em relação ao alvo supervisionado.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_eng_3',
+              type: 'pdf_page',
+              pageNumber: 3,
+              excerpt: 'Na propagação direta (forward pass), os tensores de ativação fluem sequencialmente... comparada através de uma função de perda empírica.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_ativacao_nao_linear'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_backpropagation',
+          name: 'Retropropagação (Backpropagation)',
+          definition: 'Algoritmo que utiliza a regra da cadeia para calcular eficientemente o gradiente da função de perda em relação a todos os pesos sinápticos.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_eng_4',
+              type: 'pdf_page',
+              pageNumber: 4,
+              excerpt: 'O algoritmo de retropropagação aplica sistematicamente a regra da cadeia do cálculo diferencial para computar as derivadas parciais da função de custo.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_funcao_custo_forward'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_gradiente_descendente',
+          name: 'Gradiente Descendente e Otimização',
+          definition: 'Método de otimização de primeira ordem que atualiza iterativamente os pesos na direção de maior decrescimento do erro.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_eng_5',
+              type: 'pdf_page',
+              pageNumber: 5,
+              excerpt: 'A regra de atualização básica w = w - eta · gradiente ajusta os parâmetros na direção oposta à maior inclinação da superfície de erro.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_backpropagation'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      complementaryConcepts: [
+        {
+          id: 'c_regularizacao_dropout',
+          name: 'Generalização e Dropout',
+          definition: 'Técnica de regularização que desativa aleatoriamente nós durante o treinamento para evitar co-adaptação e sobreajuste.',
+          importance: 'complementary',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_eng_6',
+              type: 'pdf_page',
+              pageNumber: 6,
+              excerpt: 'Estratégias de regularização como L2, parada precoce e dropout previnem a co-adaptação espúria de características.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_gradiente_descendente'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      relationships: [
+        {
+          id: 'rel_eng_1',
+          sourceConceptId: 'c_mlp_representacao',
+          targetConceptId: 'c_ativacao_nao_linear',
+          relationType: 'composes',
+          description: 'As ativações não lineares compõem a operação de cada camada do MLP, superando a barreira da linearidade afim.',
+          evidences: [{ id: 'ev_rel_eng_1', type: 'pdf_page', pageNumber: 2, excerpt: 'Sem funções de ativação não lineares, uma rede neural de múltiplas camadas colapsaria em uma simples transformação linear.' }],
+          internalModelConfidence: 0.99,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_eng_2',
+          sourceConceptId: 'c_funcao_custo_forward',
+          targetConceptId: 'c_backpropagation',
+          relationType: 'precedes',
+          description: 'O cálculo do erro na saída na propagação direta precede a retropropagação dos gradientes pela regra da cadeia.',
+          evidences: [{ id: 'ev_rel_eng_2', type: 'pdf_page', pageNumber: 4, excerpt: 'O gradiente do erro é propagado da camada de saída em direção às camadas de entrada.' }],
+          internalModelConfidence: 0.98,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_eng_3',
+          sourceConceptId: 'c_backpropagation',
+          targetConceptId: 'c_gradiente_descendente',
+          relationType: 'causes',
+          description: 'Os gradientes calculados na retropropagação fornecem o vetor de direção para a atualização de pesos no gradiente descendente.',
+          evidences: [{ id: 'ev_rel_eng_3', type: 'pdf_page', pageNumber: 5, excerpt: 'Com os gradientes calculados, os pesos da rede são ajustados iterativamente via Gradiente Descendente Estocástico.' }],
+          internalModelConfidence: 0.99,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+      ],
+      prerequisiteGraph: {
+        nodes: [
+          { id: 'c_mlp_representacao', name: 'Perceptron Multicamadas (MLP)', isPrerequisite: true },
+          { id: 'c_ativacao_nao_linear', name: 'Funções de Ativação', isPrerequisite: true },
+          { id: 'c_funcao_custo_forward', name: 'Forward Pass e Perda', isPrerequisite: true },
+          { id: 'c_backpropagation', name: 'Retropropagação (Backpropagation)', isPrerequisite: true },
+          { id: 'c_gradiente_descendente', name: 'Gradiente Descendente', isPrerequisite: false },
+        ],
+        edges: [
+          { from: 'c_mlp_representacao', to: 'c_ativacao_nao_linear', label: 'requer não-linearidade', relationType: 'composes' },
+          { from: 'c_ativacao_nao_linear', to: 'c_funcao_custo_forward', label: 'gera predição y_hat', relationType: 'causes' },
+          { from: 'c_funcao_custo_forward', to: 'c_backpropagation', label: 'avalia erro dL', relationType: 'precedes' },
+          { from: 'c_backpropagation', to: 'c_gradiente_descendente', label: 'computa dL/dw', relationType: 'causes' },
+        ],
+      },
+      identifiedGaps: [
+        'O texto introdutório não aborda a teoria matemática do Teorema da Aproximação Universal de Cybenko/Hornik nem arquiteturas autoatencionais (Transformers).',
+      ],
+      suggestedDiagramType: 'concept-map',
+      analyzedAt: 1730000100000,
+    },
+  },
+
+  // 4. CIÊNCIAS HUMANAS E FILOSOFIA
+  {
+    document: {
+      id: 'demo_hum_epistemology_falsifiability',
+      title: 'Epistemologia e o Critério de Demarcação Científica',
+      subject: 'Filosofia da Ciência e Teoria do Conhecimento',
+      academicArea: 'Ciências Humanas e Filosofia',
+      bibliographicReferences: [
+        'Popper, Karl R. (1972). A Lógica da Pesquisa Científica. Cultrix/Edusp.',
+        'Kuhn, Thomas S. (2000). A Estrutura das Revoluções Científicas. Perspectiva.',
+        'Chalmers, Alan F. (1993). O que é ciência afinal? Brasiliense.',
+      ],
+      type: 'pdf',
+      isDemoMaterial: true,
+      sizeBytes: 1024 * 460,
+      mimeType: 'application/pdf',
+      uploadedAt: 1730000200000,
+      pageCount: 6,
+      tableOfContents: [
+        { title: '1. O Problema da Indução e a Crítica ao Positivismo', pageNumber: 1, level: 0 },
+        { title: '2. O Critério da Falseabilidade (Popper)', pageNumber: 2, level: 0 },
+        { title: '3. A Assimetria Lógica entre Verificação e Refutação', pageNumber: 3, level: 0 },
+        { title: '4. Teoria dos Paradigmas e Ciência Normal (Kuhn)', pageNumber: 4, level: 0 },
+        { title: '5. Anomalias, Crise Epistêmica e Ruptura Revolucionária', pageNumber: 5, level: 0 },
+        { title: '6. Incomensurabilidade e o Progresso do Conhecimento', pageNumber: 6, level: 0 },
+      ],
+      pages: [
+        {
+          pageNumber: 1,
+          textContent: 'O problema clássico da indução, formulado por David Hume e revisitado por Karl Popper, demonstra a impossibilidade lógica de justificar leis universais a partir de observações particulares finitas. Por mais numerosos que sejam os cisnes brancos observados, essa evidência empírica acumulada jamais autoriza inferir com certeza absoluta a conclusão de que todos os cisnes são brancos.',
+          hasVisualElements: false,
+        },
+        {
+          pageNumber: 2,
+          textContent: 'Como alternativa ao verificacionismo do positivismo lógico do Círculo de Viena, Karl Popper propõe a falseabilidade (falsifiability) como critério estrito de demarcação entre ciência empírica e não-ciência (metafísica, pseudociência). Uma teoria somente adquire estatuto científico genuíno se for formulada de modo a admitir enunciados básicos observacionais logicamente possíveis que a contradigam.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 3,
+          textContent: 'A demarcação repousa sobre uma assimetria lógica elementar sob o modus tollens da lógica dedutiva: nenhum número finito de verificações pode comprovar a verdade definitiva de uma teoria universal (T -> p), mas uma única observação empírica contrária rigorosamente confirmada (~p) é suficiente para falsear dedutivamente a teoria (~T). O conhecimento científico progride, assim, por conjecturas ousadas e refutações sistemáticas.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 4,
+          textContent: 'Em contraste com a visão popperiana de permanente refutação crítica, Thomas Kuhn sustenta que o desenvolvimento da ciência é dominado por períodos de ciência normal. Nesses períodos, a comunidade científica opera sob a autoridade compartilhada de um paradigma — uma constelação de compromissos teóricos, valores, instrumentos e exemplares aceitos que orientam a resolução de quebra-cabeças (puzzle-solving) sem questionar as premissas fundamentais.',
+          hasVisualElements: false,
+        },
+        {
+          pageNumber: 5,
+          textContent: 'Durante a ciência normal, o acúmulo persistente de anomalias — discrepâncias entre os resultados empíricos e as expectativas paradigmáticas que resistem às soluções rotineiras — gera um estado de crise epistêmica. A perda de confiança no paradigma vigente deflagra o período de ciência extraordinária, no qual hipóteses rivais competem até que um novo paradigma conquiste a hegemonia da comunidade.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 6,
+          textContent: 'A transição entre paradigmas configura uma revolução científica caracterizada pela tese da incomensurabilidade: novos e velhos paradigmas não partilham um padrão neutro comum de julgamento ou vocabulário ontológico idêntico. O progresso científico não é um processo linear puramente cumulativo de aproximação à verdade final, mas uma evolução histórica marcada por rupturas conceituais qualitativas.',
+          hasVisualElements: true,
+        },
+      ],
+    },
+    analysis: {
+      id: 'analysis_hum_epistemology',
+      documentId: 'demo_hum_epistemology_falsifiability',
+      domain: 'Ciências Humanas e Filosofia',
+      centralTheme: 'Critérios de Demarcação, Racionalidade e Dinâmica de Transformação dos Paradigmas Científicos',
+      learningObjectives: [
+        'Analisar a crítica popperiana ao método indutivo e ao verificacionismo positivista',
+        'Compreender o critério da falseabilidade e a assimetria lógica do modus tollens',
+        'Diferenciar a prática científica da ciência normal kuhniana do falseacionismo metodológico de Popper',
+        'Explicar como o surgimento de anomalias cumulativas conduz à crise epistêmica e à revolução de paradigmas',
+      ],
+      fundamentalConcepts: [
+        {
+          id: 'c_problema_inducao',
+          name: 'Problema da Indução',
+          definition: 'Impossibilidade lógica de derivar conclusões universais válidas e necessárias a partir de amostras particulares observadas.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_hum_1',
+              type: 'pdf_page',
+              pageNumber: 1,
+              excerpt: 'Por mais numerosos que sejam os cisnes brancos observados, essa evidência empírica acumulada jamais autoriza inferir com certeza absoluta a conclusão de que todos os cisnes são brancos.',
+            },
+          ],
+          prerequisiteConceptIds: [],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_falseabilidade_demarcacao',
+          name: 'Critério da Falseabilidade',
+          definition: 'Requisito epistêmico popperiano que demarca como científica apenas a teoria que for suscetível de refutação por enunciados observacionais empíricos.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_hum_2',
+              type: 'pdf_page',
+              pageNumber: 2,
+              excerpt: 'Uma teoria somente adquire estatuto científico genuíno se for formulada de modo a admitir enunciados básicos observacionais logicamente possíveis que a contradigam.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_problema_inducao'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_assimetria_modus_tollens',
+          name: 'Assimetria Lógica da Refutação',
+          definition: 'Propriedade dedutiva fundada no modus tollens: infinitas instâncias favoráveis não comprovam uma teoria universal, mas uma única contraevidência a falseia.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_hum_3',
+              type: 'pdf_page',
+              pageNumber: 3,
+              excerpt: 'Nenhum número finito de verificações pode comprovar a verdade definitiva de uma teoria universal, mas uma única observação empírica contrária é suficiente para falsear dedutivamente a teoria.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_falseabilidade_demarcacao'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_paradigma_ciencia_normal',
+          name: 'Paradigma e Ciência Normal',
+          definition: 'Estrutura conceitual e metodológica compartilhada pela comunidade científica que orienta a resolução rotineira de quebra-cabeças teóricos e empíricos.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_hum_4',
+              type: 'pdf_page',
+              pageNumber: 4,
+              excerpt: 'Na ciência normal, a comunidade opera sob a autoridade compartilhada de um paradigma — uma constelação de compromissos teóricos e valores aceitos.',
+            },
+          ],
+          prerequisiteConceptIds: [],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_revolucao_cientifica',
+          name: 'Anomalias e Revolução Científica',
+          definition: 'Ruptura paradigmática deflagrada pelo acúmulo de anomalias insolúveis, substituindo a matriz disciplinar anterior por um novo paradigma incomensurável.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_hum_5',
+              type: 'pdf_page',
+              pageNumber: 5,
+              excerpt: 'O acúmulo persistente de anomalias... gera um estado de crise epistêmica. A perda de confiança no paradigma vigente deflagra o período de ciência extraordinária.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_paradigma_ciencia_normal'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      complementaryConcepts: [
+        {
+          id: 'c_incomensurabilidade',
+          name: 'Tese da Incomensurabilidade',
+          definition: 'Conceito kuhniano segundo o qual paradigmas sucessivos não compartilham uma escala neutra de medida ou vocabulário ontológico comum.',
+          importance: 'complementary',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_hum_6',
+              type: 'pdf_page',
+              pageNumber: 6,
+              excerpt: 'A transição entre paradigmas configura uma revolução científica caracterizada pela tese da incomensurabilidade: novos e velhos paradigmas não partilham um padrão neutro comum.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_revolucao_cientifica'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      relationships: [
+        {
+          id: 'rel_hum_1',
+          sourceConceptId: 'c_problema_inducao',
+          targetConceptId: 'c_falseabilidade_demarcacao',
+          relationType: 'causes',
+          description: 'A falência demonstrada do método indutivo levou Popper a postular a refutabilidade como única base lógica legítima da ciência.',
+          evidences: [{ id: 'ev_rel_hum_1', type: 'pdf_page', pageNumber: 2, excerpt: 'Como alternativa ao verificacionismo... Popper propõe a falseabilidade como critério de demarcação.' }],
+          internalModelConfidence: 0.99,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_hum_2',
+          sourceConceptId: 'c_falseabilidade_demarcacao',
+          targetConceptId: 'c_assimetria_modus_tollens',
+          relationType: 'composes',
+          description: 'A assimetria lógica dedutiva do modus tollens é o pilar formal sobre o qual repousa o falseacionismo popperiano.',
+          evidences: [{ id: 'ev_rel_hum_2', type: 'pdf_page', pageNumber: 3, excerpt: 'A demarcação repousa sobre uma assimetria lógica elementar sob o modus tollens.' }],
+          internalModelConfidence: 0.98,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_hum_3',
+          sourceConceptId: 'c_paradigma_ciencia_normal',
+          targetConceptId: 'c_revolucao_cientifica',
+          relationType: 'precedes',
+          description: 'O esgotamento da ciência normal sob o peso de anomalias acumuladas antecede a crise e a consequente revolução paradigmática.',
+          evidences: [{ id: 'ev_rel_hum_3', type: 'pdf_page', pageNumber: 5, excerpt: 'Durante a ciência normal, o acúmulo persistente de anomalias... deflagra a crise e a revolução.' }],
+          internalModelConfidence: 0.98,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_hum_4',
+          sourceConceptId: 'c_falseabilidade_demarcacao',
+          targetConceptId: 'c_paradigma_ciencia_normal',
+          relationType: 'contrasts',
+          description: 'Enquanto Popper preconiza o questionamento e teste contínuo das teorias, Kuhn evidencia que a ciência normal opera protegendo o paradigma.',
+          evidences: [{ id: 'ev_rel_hum_4', type: 'pdf_page', pageNumber: 4, excerpt: 'Em contraste com a visão popperiana de permanente refutação crítica, Thomas Kuhn sustenta que o desenvolvimento da ciência é dominado por períodos de ciência normal.' }],
+          internalModelConfidence: 0.96,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+      ],
+      prerequisiteGraph: {
+        nodes: [
+          { id: 'c_problema_inducao', name: 'Problema da Indução', isPrerequisite: true },
+          { id: 'c_falseabilidade_demarcacao', name: 'Falseabilidade (Popper)', isPrerequisite: true },
+          { id: 'c_assimetria_modus_tollens', name: 'Assimetria Lógica', isPrerequisite: false },
+          { id: 'c_paradigma_ciencia_normal', name: 'Paradigma e Ciência Normal (Kuhn)', isPrerequisite: true },
+          { id: 'c_revolucao_cientifica', name: 'Revoluções Científicas', isPrerequisite: false },
+        ],
+        edges: [
+          { from: 'c_problema_inducao', to: 'c_falseabilidade_demarcacao', label: 'invalida indução', relationType: 'causes' },
+          { from: 'c_falseabilidade_demarcacao', to: 'c_assimetria_modus_tollens', label: 'base lógica', relationType: 'composes' },
+          { from: 'c_falseabilidade_demarcacao', to: 'c_paradigma_ciencia_normal', label: 'tensão teórica', relationType: 'contrasts' },
+          { from: 'c_paradigma_ciencia_normal', to: 'c_revolucao_cientifica', label: 'crise por anomalias', relationType: 'precedes' },
+        ],
+      },
+      identifiedGaps: [
+        'O texto didático não detalha as críticas de Imre Lakatos (Metodologia dos Programas de Pesquisa Científica) nem o anarquismo epistemológico de Paul Feyerabend.',
+      ],
+      suggestedDiagramType: 'concept-map',
+      analyzedAt: 1730000200000,
+    },
+  },
+
+  // 5. CIÊNCIAS SOCIAIS
+  {
+    document: {
+      id: 'demo_soc_social_theory_domination',
+      title: 'Estrutura Social, Ação Social e Tipos de Dominação',
+      subject: 'Teoria Sociológica e Sociologia Política',
+      academicArea: 'Ciências Sociais',
+      bibliographicReferences: [
+        'Weber, Max. (1999). Economia e Sociedade: Fundamentos da Sociologia Compreensiva. Editora UnB.',
+        'Durkheim, Émile. (2007). As Regras do Método Sociológico. Martins Fontes.',
+        'Giddens, Anthony. (2012). Sociologia (6ª ed.). Penso.',
+      ],
+      type: 'pdf',
+      isDemoMaterial: true,
+      sizeBytes: 1024 * 470,
+      mimeType: 'application/pdf',
+      uploadedAt: 1730000300000,
+      pageCount: 6,
+      tableOfContents: [
+        { title: '1. O Conceito de Fato Social e Coerção Externa (Durkheim)', pageNumber: 1, level: 0 },
+        { title: '2. Solidariedade Mecânica e Orgânica na Divisão do Trabalho', pageNumber: 2, level: 0 },
+        { title: '3. Ação Social e Tipologia do Sentido Subjetivo (Weber)', pageNumber: 3, level: 0 },
+        { title: '4. Os Três Tipos Puros de Dominação Legítima', pageNumber: 4, level: 0 },
+        { title: '5. A Racionalização Ocidental e a Gaiola de Ferro Burocrática', pageNumber: 5, level: 0 },
+        { title: '6. Anomia Social, Coesão e Instituições Contemporâneas', pageNumber: 6, level: 0 },
+      ],
+      pages: [
+        {
+          pageNumber: 1,
+          textContent: 'Émile Durkheim define o objeto sui generis da sociologia como o fato social: maneiras de agir, pensar e sentir exteriores ao indivíduo e dotadas de um poder coercitivo em virtude do qual se lhe impõem. A exterioridade e a coercitividade garantem que a sociedade não seja a mera soma mecânica de suas partes individuais, possuindo leis estruturais próprias que devem ser tratadas metodologicamente como coisas.',
+          hasVisualElements: false,
+        },
+        {
+          pageNumber: 2,
+          textContent: 'Na obra A Divisão do Trabalho Social, Durkheim distingue duas formas de coesão: a solidariedade mecânica, típica de sociedades tradicionais com baixa especialização funcional onde a consciência coletiva absorve quase integralmente as consciências individuais; e a solidariedade orgânica, característica das sociedades modernas complexas, fundada na interdependência gerada pela avançada diferenciação profissional e na consolidação do direito restitutivo.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 3,
+          textContent: 'Em contraste com a abordagem durkheimiana, Max Weber concebe a sociologia como ciência compreensiva da ação social. Ação social é a conduta humana cujo sentido subjetivamente visado pelo agente refere-se ao comportamento de outros, orientando-se por ele. Weber estabelece quatro tipos ideais: racional com relação a fins (cálculo instrumental custo-benefício), racional com relação a valores, afetiva (emocional) e tradicional (arraigada em costumes e hábitos).',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 4,
+          textContent: 'A dominação, entendida por Weber como a probabilidade de encontrar obediência a um mandato, apoia-se em crenças de legitimidade. Weber classifica três tipos puros: dominação tradicional (crença na santidade dos costumes transmitidos de tempos imemoriais); carismática (devoção afetiva e extraordinária à santidade, heroísmo ou exemplaridade de um líder); e racional-legal (crença na legalidade de ordenamentos estatutários formalmente instituídos e na competência funcional dos governantes).',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 5,
+          textContent: 'A expansão da dominação legal sustenta a burocracia moderna: hierarquia funcional rígida, impessoalidade nas decisões, separação entre bens públicos e patrimônio privado e recrutamento por mérito técnico. Para Weber, a racionalização formal conduz ao desencantamento do mundo e aprisiona os sujeitos na chamada gaiola de ferro (iron cage) da eficácia tecnocrática desprovida de sentido ético substantivo.',
+          hasVisualElements: false,
+        },
+        {
+          pageNumber: 6,
+          textContent: 'Quando a rápida transformação econômica ou institucional fragmenta a capacidade regulatória das normas morais, a sociedade precipita-se na anomia — estado patológico de desregulamentação e perda de referências coletivas. A preservação da coesão nas democracias contemporâneas exige instituições mediadoras capazes de articular a liberdade individual à responsabilidade cívica compartilhada.',
+          hasVisualElements: true,
+        },
+      ],
+    },
+    analysis: {
+      id: 'analysis_soc_social_theory',
+      documentId: 'demo_soc_social_theory_domination',
+      domain: 'Ciências Sociais',
+      centralTheme: 'Mecanismos de Coesão, Tipologia da Ação e Fundamentos da Dominação Política na Modernidade',
+      learningObjectives: [
+        'Compreender o conceito durkheimiano de fato social com base em suas características de exterioridade, coercitividade e generalidade',
+        'Distinguir a solidariedade mecânica da orgânica na evolução da divisão social do trabalho',
+        'Mapear a tipologia weberiana da ação social e a metodologia dos tipos ideais compreensivos',
+        'Analisar a fundamentação da autoridade nos três tipos puros de dominação legítima (tradicional, carismática e racional-legal)',
+      ],
+      fundamentalConcepts: [
+        {
+          id: 'c_fato_social',
+          name: 'Fato Social (Durkheim)',
+          definition: 'Maneiras de agir, pensar e sentir exteriores ao indivíduo e dotadas de poder coercitivo em virtude do qual se lhe impõem.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_soc_1',
+              type: 'pdf_page',
+              pageNumber: 1,
+              excerpt: 'Émile Durkheim define o objeto sui generis da sociologia como o fato social: maneiras de agir, pensar e sentir exteriores ao indivíduo e dotadas de um poder coercitivo.',
+            },
+          ],
+          prerequisiteConceptIds: [],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_solidariedade_social',
+          name: 'Solidariedade Mecânica e Orgânica',
+          definition: 'Formas de coesão social fundadas, respectivamente, na semelhança e consciência coletiva rígida, ou na interdependência e divisão do trabalho.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_soc_2',
+              type: 'pdf_page',
+              pageNumber: 2,
+              excerpt: 'Solidariedade mecânica, típica de sociedades tradicionais com baixa especialização; e solidariedade orgânica, característica das sociedades modernas complexas.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_fato_social'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_acao_social_weber',
+          name: 'Ação Social e Tipologia Compreensiva',
+          definition: 'Conduta humana dotada de sentido subjetivo orientado pelas ações e expectativas de outros indivíduos.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_soc_3',
+              type: 'pdf_page',
+              pageNumber: 3,
+              excerpt: 'Ação social é a conduta humana cujo sentido subjetivamente visado pelo agente refere-se ao comportamento de outros, orientando-se por ele.',
+            },
+          ],
+          prerequisiteConceptIds: [],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_tipos_dominacao',
+          name: 'Três Tipos de Dominação Legítima',
+          definition: 'Classificação weberiana da autoridade aceita com base na tradição ancestral, no carisma extraordinário ou na legalidade racional de normas estatutárias.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_soc_4',
+              type: 'pdf_page',
+              pageNumber: 4,
+              excerpt: 'Weber classifica três tipos puros: dominação tradicional... carismática... e racional-legal.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_acao_social_weber'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_burocracia_racionalizacao',
+          name: 'Burocracia e Gaiola de Ferro',
+          definition: 'Organização administrativa fundada na competência formal impessoal que, levada ao extremo, confina a vida social na eficácia tecnocrática.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_soc_5',
+              type: 'pdf_page',
+              pageNumber: 5,
+              excerpt: 'A racionalização formal conduz ao desencantamento do mundo e aprisiona os sujeitos na chamada gaiola de ferro da eficácia tecnocrática.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_tipos_dominacao'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      complementaryConcepts: [
+        {
+          id: 'c_anomia_social',
+          name: 'Anomia Social',
+          definition: 'Condição patológica de enfraquecimento das normas regulatórias morais que afeta a coesão societária.',
+          importance: 'complementary',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_soc_6',
+              type: 'pdf_page',
+              pageNumber: 6,
+              excerpt: 'A sociedade precipita-se na anomia — estado patológico de desregulamentação e perda de referências coletivas.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_solidariedade_social'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      relationships: [
+        {
+          id: 'rel_soc_1',
+          sourceConceptId: 'c_fato_social',
+          targetConceptId: 'c_solidariedade_social',
+          relationType: 'causes',
+          description: 'A divisão social do trabalho, como fato social estrutural, engendra a transição da solidariedade mecânica para a orgânica.',
+          evidences: [{ id: 'ev_rel_soc_1', type: 'pdf_page', pageNumber: 2, excerpt: 'A divisão do trabalho engendra a solidariedade orgânica nas sociedades modernas.' }],
+          internalModelConfidence: 0.98,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_soc_2',
+          sourceConceptId: 'c_acao_social_weber',
+          targetConceptId: 'c_tipos_dominacao',
+          relationType: 'precedes',
+          description: 'O sentido subjetivo racional e valorativo da ação fundamenta as três modalidades de legitimação da dominação política.',
+          evidences: [{ id: 'ev_rel_soc_2', type: 'pdf_page', pageNumber: 4, excerpt: 'A dominação apoia-se em crenças de legitimidade orientadas por tipos de ação social.' }],
+          internalModelConfidence: 0.97,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_soc_3',
+          sourceConceptId: 'c_tipos_dominacao',
+          targetConceptId: 'c_burocracia_racionalizacao',
+          relationType: 'causes',
+          description: 'O predomínio da dominação racional-legal impulsiona a estruturação da burocracia como aparelho de governo impessoal.',
+          evidences: [{ id: 'ev_rel_soc_3', type: 'pdf_page', pageNumber: 5, excerpt: 'A expansão da dominação legal sustenta a burocracia moderna e a racionalização formal.' }],
+          internalModelConfidence: 0.99,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_soc_4',
+          sourceConceptId: 'c_fato_social',
+          targetConceptId: 'c_acao_social_weber',
+          relationType: 'contrasts',
+          description: 'Durkheim prioriza a coerção e exterioridade estrutural do fato social, enquanto Weber prioriza o sentido compreensivo atribuído pelo indivíduo.',
+          evidences: [{ id: 'ev_rel_soc_4', type: 'pdf_page', pageNumber: 3, excerpt: 'Em contraste com a abordagem durkheimiana, Max Weber concebe a sociologia como ciência compreensiva da ação social.' }],
+          internalModelConfidence: 0.98,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+      ],
+      prerequisiteGraph: {
+        nodes: [
+          { id: 'c_fato_social', name: 'Fato Social', isPrerequisite: true },
+          { id: 'c_solidariedade_social', name: 'Solidariedade Social', isPrerequisite: false },
+          { id: 'c_acao_social_weber', name: 'Ação Social (Weber)', isPrerequisite: true },
+          { id: 'c_tipos_dominacao', name: 'Tipos de Dominação', isPrerequisite: true },
+          { id: 'c_burocracia_racionalizacao', name: 'Burocracia e Racionalização', isPrerequisite: false },
+        ],
+        edges: [
+          { from: 'c_fato_social', to: 'c_solidariedade_social', label: 'estrutura a divisão', relationType: 'causes' },
+          { from: 'c_fato_social', to: 'c_acao_social_weber', label: 'divergência metodológica', relationType: 'contrasts' },
+          { from: 'c_acao_social_weber', to: 'c_tipos_dominacao', label: 'legitima mandato', relationType: 'precedes' },
+          { from: 'c_tipos_dominacao', to: 'c_burocracia_racionalizacao', label: 'institui burocracia legal', relationType: 'causes' },
+        ],
+      },
+      identifiedGaps: [
+        'O texto introdutório não aborda o materialismo histórico-dialético de Karl Marx nem as teorias da pós-modernidade de Zygmunt Bauman e Pierre Bourdieu.',
+      ],
+      suggestedDiagramType: 'concept-map',
+      analyzedAt: 1730000300000,
+    },
+  },
+
+  // =========================================================================
+  // 5. ADMINISTRAÇÃO E ECONOMIA
+  // =========================================================================
+  // 6. EDUCAÇÃO E PSICOLOGIA
+  {
+    document: {
+      id: 'demo_edu_cognitive_load_meaningful_learning',
+      title: 'Teoria da Carga Cognitiva e Aprendizagem Significativa',
+      subject: 'Psicologia Cognitiva e Ciências da Aprendizagem',
+      academicArea: 'Educação e Psicologia',
+      bibliographicReferences: [
+        'Sweller, J. (1988). Cognitive load during problem solving: Effects on learning. Cognitive Science, 12(2), 257-285.',
+        'Ausubel, D. P. (2003). Aquisição e Retenção de Conhecimentos: Uma Perspectiva Cognitiva. Plátano Edições Técnicas.',
+        'Mayer, R. E. (2020). Multimedia Learning (3rd ed.). Cambridge University Press.',
+      ],
+      type: 'pdf',
+      isDemoMaterial: true,
+      sizeBytes: 1024 * 475,
+      mimeType: 'application/pdf',
+      uploadedAt: 1730000500000,
+      pageCount: 6,
+      tableOfContents: [
+        { title: '1. Arquitetura Cognitiva Humana: Memória de Trabalho vs Longo Prazo', pageNumber: 1, level: 0 },
+        { title: '2. A Tríade da Carga Cognitiva (Sweller): Intrínseca, Extrínseca e Germânica', pageNumber: 2, level: 0 },
+        { title: '3. Formação e Automação de Esquemas Mentais (Chunks)', pageNumber: 3, level: 0 },
+        { title: '4. Aprendizagem Significativa e Subsunçores (David Ausubel)', pageNumber: 4, level: 0 },
+        { title: '5. Diferenciação Progressiva e Reconciliação Integrativa', pageNumber: 5, level: 0 },
+        { title: '6. Prática de Recuperação Ativa e Redução de Interferência', pageNumber: 6, level: 0 },
+      ],
+      pages: [
+        {
+          pageNumber: 1,
+          textContent: 'A teoria da cognição humana estabelece uma divisão funcional crucial entre a memória de trabalho (working memory) e a memória de longo prazo (long-term memory). Enquanto a memória de longo prazo possui capacidade de armazenamento praticamente ilimitada e estrutura redes de conhecimento duradouras, a memória de trabalho é severamente restrita em capacidade (processa entre 3 a 5 elementos simultâneos) e em duração temporal (cerca de 20 a 30 segundos sem repetição).',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 2,
+          textContent: 'John Sweller formulou a Teoria da Carga Cognitiva (Cognitive Load Theory) discriminando três cargas que incidem sobre a memória de trabalho: carga intrínseca (determinada pela complexidade inerente do conteúdo e interatividade entre elementos); carga extrínseca (gerada por design instrucional inadequado, redundâncias ou dispersão da atenção); e carga germânica ou relevante (esforço mental construtivo dedicado à codificação e assimilação de novos esquemas conceituais).',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 3,
+          textContent: 'O mecanismo pelo qual o cérebro supera as severas restrições da memória de trabalho é a criação de esquemas mentais (schemas ou chunks). Um esquema organiza múltiplos elementos de informação interconectados em uma única unidade conceitual coerente. Quando automatizados pela prática e recuperação repetida, esquemas complexos são processados pela memória de trabalho consumindo uma fração mínima de capacidade atencional.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 4,
+          textContent: 'Na teoria da aprendizagem significativa de David Ausubel, o fator isolado mais importante que influencia a aprendizagem é aquilo que o estudante já sabe. A aprendizagem significativa ocorre quando um novo conceito é ancorado de forma não arbitrária e substantiva em estruturas prévias da mente do estudante, denominadas conceitos subsunçores (subsumers), em oposição à mera memorização mecânica ou decoreba temporária.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 5,
+          textContent: 'A estruturação hierárquica do conhecimento requer dois processos epistêmicos fundamentais descritos por Ausubel: a diferenciação progressiva (na qual ideias mais gerais e inclusivas são apresentadas primeiro e progressivamente desdobradas em especificidades e mecanismos detalhados) e a reconciliação integrativa (na qual semelhanças, contrastes e relações causais entre conceitos aparentemente distintos são explicitados para eliminar ambiguidades).',
+          hasVisualElements: false,
+        },
+        {
+          pageNumber: 6,
+          textContent: 'Pesquisas contemporâneas em neurociência cognitiva demonstram que a aprendizagem é maximizada quando o estudo combina a modulação da carga cognitiva com a recuperação ativa (active retrieval) e repetição espaçada. Evocar o conhecimento com esforço sem consultar a fonte fortalece as trilhas neurais e a estabilidade da memória de longo prazo, protegendo o estudante contra a ilusão de competência provocada pela mera releitura passiva.',
+          hasVisualElements: true,
+        },
+      ],
+    },
+    analysis: {
+      id: 'analysis_edu_cognitive_load',
+      documentId: 'demo_edu_cognitive_load_meaningful_learning',
+      domain: 'Educação e Psicologia',
+      centralTheme: 'Mecanismos Psicológicos do Processamento da Informação, Carga Cognitiva e Aprendizagem Significativa',
+      learningObjectives: [
+        'Diferenciar as restrições da memória de trabalho da capacidade estrutural da memória de longo prazo',
+        'Identificar e calcular o impacto das cargas intrínseca, extrínseca e germânica na aprendizagem',
+        'Compreender o papel dos subsunçores de Ausubel na ancoragem substantiva de novos conceitos',
+        'Explicar como a automação de esquemas mentais e a recuperação ativa protegem contra a sobrecarga atencional',
+      ],
+      fundamentalConcepts: [
+        {
+          id: 'c_memoria_trabalho_longo_prazo',
+          name: 'Arquitetura Cognitiva Humana',
+          definition: 'Divisão funcional entre a memória de trabalho (capacidade restrita e volátil) e a memória de longo prazo (repositório duradouro de esquemas).',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_edu_1',
+              type: 'pdf_page',
+              pageNumber: 1,
+              excerpt: 'A memória de longo prazo possui capacidade de armazenamento praticamente ilimitada... a memória de trabalho é severamente restrita em capacidade (processa entre 3 a 5 elementos simultâneos).',
+            },
+          ],
+          prerequisiteConceptIds: [],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_triade_carga_cognitiva',
+          name: 'Tríade da Carga Cognitiva (Sweller)',
+          definition: 'Classificação do esforço mental imposto à memória de trabalho em intrínseco (complexidade do tema), extrínseco (design ruim) e germânico (construção de esquemas).',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_edu_2',
+              type: 'pdf_page',
+              pageNumber: 2,
+              excerpt: 'Discriminando três cargas que incidem sobre a memória de trabalho: carga intrínseca... carga extrínseca... e carga germânica ou relevante.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_memoria_trabalho_longo_prazo'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_esquemas_mentais_automacao',
+          name: 'Esquemas Mentais (Chunks)',
+          definition: 'Unidades cognitivas integradoras que agrupam múltiplos elementos em um único bloco de significado, economizando espaço na memória de trabalho.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_edu_3',
+              type: 'pdf_page',
+              pageNumber: 3,
+              excerpt: 'Um esquema organiza múltiplos elementos de informação interconectados em uma única unidade conceitual coerente.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_triade_carga_cognitiva'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_subsuncores_ausubel',
+          name: 'Subsunçores e Aprendizagem Significativa',
+          definition: 'Conhecimentos prévios relevantes e claros que servem de ancoradouro cognitivo para que novas ideias sejam assimiladas substantivamente.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_edu_4',
+              type: 'pdf_page',
+              pageNumber: 4,
+              excerpt: 'A aprendizagem significativa ocorre quando um novo conceito é ancorado de forma não arbitrária e substantiva em estruturas prévias... denominadas conceitos subsunçores.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_memoria_trabalho_longo_prazo'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_diferenciacao_reconciliacao',
+          name: 'Diferenciação e Reconciliação Integrativa',
+          definition: 'Organização pedagógica que parte dos conceitos mais inclusivos rumo aos detalhes, explicitando continuidades e contrastes conceituais.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_edu_5',
+              type: 'pdf_page',
+              pageNumber: 5,
+              excerpt: 'Diferenciação progressiva (ideias gerais primeiro) e reconciliação integrativa (semelhanças, contrastes e relações causais explicitados).',
+            },
+          ],
+          prerequisiteConceptIds: ['c_subsuncores_ausubel'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      complementaryConcepts: [
+        {
+          id: 'c_recuperacao_ativa',
+          name: 'Efeito de Testagem e Recuperação Ativa',
+          definition: 'Prática de evocar ativamente da memória de longo prazo as informações aprendidas para consolidar as sinapses e prevenir esquecimento.',
+          importance: 'complementary',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_edu_6',
+              type: 'pdf_page',
+              pageNumber: 6,
+              excerpt: 'Evocar o conhecimento com esforço sem consultar a fonte fortalece as trilhas neurais e a estabilidade da memória de longo prazo.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_esquemas_mentais_automacao'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      relationships: [
+        {
+          id: 'rel_edu_1',
+          sourceConceptId: 'c_memoria_trabalho_longo_prazo',
+          targetConceptId: 'c_triade_carga_cognitiva',
+          relationType: 'causes',
+          description: 'A finitude severa da memória de trabalho é a causa direta da necessidade de controlar as cargas intrínseca e extrínseca.',
+          evidences: [{ id: 'ev_rel_edu_1', type: 'pdf_page', pageNumber: 2, excerpt: 'Três cargas que incidem sobre a memória de trabalho com capacidade restrita.' }],
+          internalModelConfidence: 0.99,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_edu_2',
+          sourceConceptId: 'c_triade_carga_cognitiva',
+          targetConceptId: 'c_esquemas_mentais_automacao',
+          relationType: 'regulates',
+          description: 'A canalização da carga germânica permite a formação de esquemas que, uma vez consolidados, reduzem a carga no futuro.',
+          evidences: [{ id: 'ev_rel_edu_2', type: 'pdf_page', pageNumber: 3, excerpt: 'Um esquema organiza múltiplos elementos... consumindo uma fração mínima de capacidade atencional.' }],
+          internalModelConfidence: 0.98,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_edu_3',
+          sourceConceptId: 'c_subsuncores_ausubel',
+          targetConceptId: 'c_diferenciacao_reconciliacao',
+          relationType: 'precedes',
+          description: 'A existência de subsunçores viabiliza a diferenciação progressiva e a reconciliação com novas informações.',
+          evidences: [{ id: 'ev_rel_edu_3', type: 'pdf_page', pageNumber: 5, excerpt: 'A estruturação hierárquica do conhecimento requer diferenciação progressiva e reconciliação integrativa a partir de subsunçores.' }],
+          internalModelConfidence: 0.98,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_edu_4',
+          sourceConceptId: 'c_esquemas_mentais_automacao',
+          targetConceptId: 'c_recuperacao_ativa',
+          relationType: 'causes',
+          description: 'O esforço deliberado de recuperação ativa fortalece e consolida a automação dos esquemas mentais na memória de longo prazo.',
+          evidences: [{ id: 'ev_rel_edu_4', type: 'pdf_page', pageNumber: 6, excerpt: 'Evocar o conhecimento fortalece as trilhas neurais e a estabilidade da memória de longo prazo.' }],
+          internalModelConfidence: 0.99,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+      ],
+      prerequisiteGraph: {
+        nodes: [
+          { id: 'c_memoria_trabalho_longo_prazo', name: 'Memória de Trabalho e Longo Prazo', isPrerequisite: true },
+          { id: 'c_triade_carga_cognitiva', name: 'Tríade da Carga Cognitiva', isPrerequisite: true },
+          { id: 'c_esquemas_mentais_automacao', name: 'Esquemas Mentais', isPrerequisite: false },
+          { id: 'c_subsuncores_ausubel', name: 'Subsunçores (Ausubel)', isPrerequisite: true },
+          { id: 'c_diferenciacao_reconciliacao', name: 'Diferenciação e Reconciliação', isPrerequisite: false },
+        ],
+        edges: [
+          { from: 'c_memoria_trabalho_longo_prazo', to: 'c_triade_carga_cognitiva', label: 'impõe limite', relationType: 'causes' },
+          { from: 'c_triade_carga_cognitiva', to: 'c_esquemas_mentais_automacao', label: 'estimula carga germânica', relationType: 'regulates' },
+          { from: 'c_memoria_trabalho_longo_prazo', to: 'c_subsuncores_ausubel', label: 'ancora em longo prazo', relationType: 'precedes' },
+          { from: 'c_subsuncores_ausubel', to: 'c_diferenciacao_reconciliacao', label: 'hierarquização', relationType: 'causes' },
+        ],
+      },
+      identifiedGaps: [
+        'O texto didático não detalha as críticas de Walter Kintsch sobre compreensão leitora profunda nem a teoria dos níveis de processamento de Craik & Lockhart.',
+      ],
+      suggestedDiagramType: 'concept-map',
+      analyzedAt: 1730000500000,
+    },
+  },
+  // =========================================================================
+  // 7. ADMINISTRAÇÃO E ECONOMIA
+  // =========================================================================
+  {
+    document: {
+      id: 'demo_adm_bounded_rationality_decision',
+      title: 'Racionalidade Limitada e Tomada de Decisão nas Organizações',
+      subject: 'Teoria da Decisão e Comportamento Administrativo',
+      academicArea: 'Administração e Economia',
+      bibliographicReferences: [
+        'Simon, H. A. (1947). Administrative Behavior: A Study of Decision-Making Processes in Administrative Organization. Macmillan.',
+        'Simon, H. A. (1955). A Behavioral Model of Rational Choice. The Quarterly Journal of Economics, 69(1), 99-118.',
+        'Simon, H. A. (1978). Rational Decision-Making in Business Organizations. Nobel Memorial Lecture, American Economic Review, 69(4), 493-513.',
+      ],
+      type: 'pdf',
+      isDemoMaterial: true,
+      sizeBytes: 1024 * 495,
+      mimeType: 'application/pdf',
+      uploadedAt: 1730000600000,
+      pageCount: 6,
+      tableOfContents: [
+        { title: '1. O Colapso da Racionalidade Clássica e o Conceito de Racionalidade Limitada', pageNumber: 1, level: 0 },
+        { title: '2. Limitações Informacionais, Assimetria e o Custo de Busca', pageNumber: 2, level: 0 },
+        { title: '3. O Princípio do Satisficing e os Níveis de Aspiração', pageNumber: 3, level: 0 },
+        { title: '4. A Estrutura Organizacional como Mecanismo de Redução de Incerteza', pageNumber: 4, level: 0 },
+        { title: '5. Aplicações em Decisões Gerenciais, Alocação de Recursos e Políticas Públicas', pageNumber: 5, level: 0 },
+        { title: '6. Limitações do Modelo e Fronteiras com a Economia Comportamental', pageNumber: 6, level: 0 },
+      ],
+      pages: [
+        {
+          pageNumber: 1,
+          textContent: 'O modelo econômico neoclássico tradicional fundamentava-se na premissa do Homo Economicus, um agente ideal dotado de onisciência informativa, ordenação axiomática e imutável de preferências e capacidade ilimitada de computar probabilidades de desfechos futuros. Em contraposição a essa ficção metodológica, Herbert A. Simon introduziu o conceito de Racionalidade Limitada (Bounded Rationality), postulando que o comportamento humano na vida real é intencionalmente racional, mas severamente restringido pelas capacidades neurofisiológicas de atenção, armazenamento na memória de trabalho e processamento cognitivo da mente humana diante da complexidade do mundo.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 2,
+          textContent: 'Na tomada de decisão organizacional, o tomador de decisão nunca dispõe de um mapa completo de todas as opções de ação ou de suas respectivas consequências. A obtenção de dados incorre em custos marginais crescentes de busca, além de atrasos temporais que podem inviabilizar a decisão oportuna. A incerteza genuína sobre o comportamento futuro de concorrentes, flutuações de mercado e dinâmicas sociais impede a formulação de distribuições de probabilidade perfeitamente conhecidas, transformando a decisão em um processo dinâmico de coleta seletiva sob assimetria informacional.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 3,
+          textContent: 'Como a otimização global é computacionalmente inexequível, os agentes reais operam por meio do princípio do satisficing (satisfação em vez de maximização). Em vez de buscar a melhor alternativa absoluta em todo o universo possível, o decisor busca sequencialmente até encontrar a primeira alternativa que atinja ou supere um limiar pré-estabelecido denominado Nível de Aspiração. Esse nível de aspiração não é estático: ele eleva-se gradualmente após períodos prolongados de busca exitosa e reduz-se com o prolongamento do fracasso, adaptando o esforço cognitivo ao ambiente.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 4,
+          textContent: 'Simon salienta que a organização formal existe precisamente para remediar os limites cognitivos de seus membros individuais. Por meio da divisão funcional de trabalho, especialização de papéis, rotinas operacionais padronizadas (SOPs), canais filtrados de comunicação e absorção da incerteza, a organização delimita e simplifica o horizonte de decisão de cada indivíduo. A autoridade e a hierarquia servem para impor premissas decisórias, permitindo que indivíduos de racionalidade limitada alcancem coletivamente níveis elevados de coordenação e eficácia.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 5,
+          textContent: 'O modelo da racionalidade limitada possui vasta aplicação prática na gestão empresarial e no setor público. Em alocação de orçamentos e priorização de investimentos, gerentes recorrem a heurísticas decisórias (regras de bolso testadas pela experiência prática) e análise marginal aproximada, em vez de sofisticados modelos teóricos de equilíbrio geral. Na formulação de políticas públicas, o modelo do incrementalismo reflete o ajuste sucessivo de aspirações e negociações entre grupos de interesse sob escassez de recursos e pressões temporais severas.',
+          hasVisualElements: true,
+        },
+        {
+          pageNumber: 6,
+          textContent: 'Embora Simon tenha fundamentado a revolução comportamental, o modelo clássico de satisficing recebe críticas por não especificar formalmente os pontos exatos de interrupção da busca heurística na ausência de regras explícitas. Pesquisas posteriores de Daniel Kahneman e Amos Tversky expandiram o paradigma mapeando vieses cognitivos e heurísticas sistemáticas. NOTA DE INTEGRIDADE DA PLATAFORMA: Este material constitui uma síntese didática autoral elaborada para experimentação no NeuroClass AI, distinguindo rigorosamente os postulados documentados de Simon das inferências pedagógicas formativas.',
+          hasVisualElements: false,
+        },
+      ],
+    },
+    analysis: {
+      id: 'analysis_adm_bounded_rationality',
+      documentId: 'demo_adm_bounded_rationality_decision',
+      domain: 'Administração e Economia',
+      centralTheme: 'Mecanismos Cognitivos e Estruturais da Tomada de Decisão sob Racionalidade Limitada nas Organizações',
+      learningObjectives: [
+        'Compreender a ruptura entre o modelo de otimização onisciente (Homo Economicus) e a Racionalidade Limitada de Herbert Simon',
+        'Dominar o princípio do satisficing e a dinâmica de ajustamento dos níveis de aspiração sob busca heurística sequencial',
+        'Analisar como a estrutura, rotinas e canais organizacionais funcionam como mecanismos de absorção e redução da incerteza',
+        'Aplicar o modelo da racionalidade limitada em cenários práticos de alocação de recursos escassos e priorização gerencial',
+      ],
+      fundamentalConcepts: [
+        {
+          id: 'c_racionalidade_limitada',
+          name: 'Racionalidade Limitada (Bounded Rationality)',
+          definition: 'Postulado segundo o qual a tomada de decisão humana é intencionalmente racional, mas estritamente limitada pela capacidade cognitiva de processamento de informação, atenção finita e complexidade ambiental.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_adm_1',
+              type: 'pdf_page',
+              pageNumber: 1,
+              excerpt: 'Herbert A. Simon introduziu o conceito de Racionalidade Limitada (Bounded Rationality), postulando que o comportamento humano na vida real é intencionalmente racional, mas severamente restringido pelas capacidades neurofisiológicas de atenção, armazenamento na memória de trabalho e processamento cognitivo.',
+            },
+          ],
+          prerequisiteConceptIds: [],
+          diagnosticState: 'understood',
+        },
+        {
+          id: 'c_limitacoes_cognitivas_informacao',
+          name: 'Limitações Informacionais e Custo de Busca',
+          definition: 'Incompletude fundamental das informações disponíveis ao decisor gerencial, decorrente de custos marginais de obtenção de dados, atrasos temporais e incerteza inerradicável sobre o futuro.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_adm_2',
+              type: 'pdf_page',
+              pageNumber: 2,
+              excerpt: 'A obtenção de dados incorre em custos marginais crescentes de busca, além de atrasos temporais que podem inviabilizar a decisão oportuna.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_racionalidade_limitada'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_satisficing_aspiracao',
+          name: 'Princípio do Satisficing e Níveis de Aspiração',
+          definition: 'Estratégia comportamental de interromper a busca sequencial pela primeira alternativa que satisfaça um patamar aceitável de aspiração pré-determinado, em substituição à maximização global.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_adm_3',
+              type: 'pdf_page',
+              pageNumber: 3,
+              excerpt: 'Em vez de buscar a melhor alternativa absoluta em todo o universo possível, o decisor busca sequencialmente até encontrar a primeira alternativa que atinja ou supere um limiar pré-estabelecido denominado Nível de Aspiração.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_limitacoes_cognitivas_informacao'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_busca_heuristica',
+          name: 'Busca Heurística Sequencial de Alternativas',
+          definition: 'Processo não-aleatório e seletivo de exploração do espaço de decisão guiado por regras empíricas e atalhos mentais que filtram alternativas sob restrição de tempo.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_adm_4',
+              type: 'pdf_page',
+              pageNumber: 3,
+              excerpt: 'O decisor busca sequencialmente até encontrar a primeira alternativa que atinja ou supere um limiar pré-estabelecido.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_satisficing_aspiracao'],
+          diagnosticState: 'unassessed',
+        },
+        {
+          id: 'c_mecanismos_organizacionais',
+          name: 'Estrutura Organizacional e Absorção de Incerteza',
+          definition: 'Função coordenadora da hierarquia, procedimentos operacionais padrão e canais de informação que simplificam o horizonte decisório dos membros e viabilizam cooperação estável.',
+          importance: 'fundamental',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_adm_5',
+              type: 'pdf_page',
+              pageNumber: 4,
+              excerpt: 'Por meio da divisão funcional de trabalho, especialização de papéis, rotinas operacionais padronizadas (SOPs), canais filtrados de comunicação e absorção da incerteza, a organização delimita e simplifica o horizonte de decisão.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_racionalidade_limitada'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      complementaryConcepts: [
+        {
+          id: 'c_tomada_decisao_recursos',
+          name: 'Decisão sob Incerteza e Alocação de Recursos',
+          definition: 'Aplicação das heurísticas de satisficing em contextos reais de priorização de investimentos de capital, orçamento e gestão pública incremental.',
+          importance: 'complementary',
+          epistemicStatus: 'explicitly_documented',
+          evidenceReferences: [
+            {
+              id: 'ev_adm_6',
+              type: 'pdf_page',
+              pageNumber: 5,
+              excerpt: 'Em alocação de orçamentos e priorização de investimentos, gerentes recorrem a heurísticas decisórias (regras de bolso testadas pela experiência prática) e análise marginal aproximada.',
+            },
+          ],
+          prerequisiteConceptIds: ['c_mecanismos_organizacionais', 'c_satisficing_aspiracao'],
+          diagnosticState: 'unassessed',
+        },
+      ],
+      relationships: [
+        {
+          id: 'rel_adm_1',
+          sourceConceptId: 'c_racionalidade_limitada',
+          targetConceptId: 'c_limitacoes_cognitivas_informacao',
+          relationType: 'causes',
+          description: 'A finitude da mente humana e a complexidade do ambiente originam assimetrias e custos de busca informacional.',
+          evidences: [{ id: 'ev_rel_adm_1', type: 'pdf_page', pageNumber: 2, excerpt: 'A incerteza genuína impede a formulação de distribuições de probabilidade perfeitamente conhecidas.' }],
+          internalModelConfidence: 0.99,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_adm_2',
+          sourceConceptId: 'c_limitacoes_cognitivas_informacao',
+          targetConceptId: 'c_satisficing_aspiracao',
+          relationType: 'causes',
+          description: 'A impossibilidade de processar todas as alternativas obriga a substituição da maximização pelo critério de satisficing.',
+          evidences: [{ id: 'ev_rel_adm_2', type: 'pdf_page', pageNumber: 3, excerpt: 'Como a otimização global é computacionalmente inexequível, os agentes reais operam por meio do princípio do satisficing.' }],
+          internalModelConfidence: 0.98,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_adm_3',
+          sourceConceptId: 'c_satisficing_aspiracao',
+          targetConceptId: 'c_busca_heuristica',
+          relationType: 'regulates',
+          description: 'O nível de aspiração em vigor delimita quando a busca sequencial deve ser interrompida.',
+          evidences: [{ id: 'ev_rel_adm_3', type: 'pdf_page', pageNumber: 3, excerpt: 'O decisor busca sequencialmente até encontrar a primeira alternativa que atinja ou supere um limiar pré-estabelecido.' }],
+          internalModelConfidence: 0.98,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_adm_4',
+          sourceConceptId: 'c_racionalidade_limitada',
+          targetConceptId: 'c_mecanismos_organizacionais',
+          relationType: 'causes',
+          description: 'A organização formal surge exatamente como arranjo estrutural para compensar e remediar os limites cognitivos individuais.',
+          evidences: [{ id: 'ev_rel_adm_4', type: 'pdf_page', pageNumber: 4, excerpt: 'A organização formal existe precisamente para remediar os limites cognitivos de seus membros individuais.' }],
+          internalModelConfidence: 0.99,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+        {
+          id: 'rel_adm_5',
+          sourceConceptId: 'c_mecanismos_organizacionais',
+          targetConceptId: 'c_tomada_decisao_recursos',
+          relationType: 'regulates',
+          description: 'Procedimentos padronizados e canais hierárquicos orientam a alocação de recursos escassos sob incerteza.',
+          evidences: [{ id: 'ev_rel_adm_5', type: 'pdf_page', pageNumber: 5, excerpt: 'Gerentes recorrem a heurísticas decisórias e análise marginal aproximada, em vez de sofisticados modelos teóricos.' }],
+          internalModelConfidence: 0.97,
+          isModelInference: false,
+          epistemicStatus: 'explicitly_documented',
+        },
+      ],
+      prerequisiteGraph: {
+        nodes: [
+          { id: 'c_racionalidade_limitada', name: 'Racionalidade Limitada', isPrerequisite: true },
+          { id: 'c_limitacoes_cognitivas_informacao', name: 'Limitações Informacionais', isPrerequisite: true },
+          { id: 'c_satisficing_aspiracao', name: 'Satisficing e Aspiração', isPrerequisite: true },
+          { id: 'c_busca_heuristica', name: 'Busca Heurística', isPrerequisite: false },
+          { id: 'c_mecanismos_organizacionais', name: 'Estrutura Organizacional', isPrerequisite: true },
+          { id: 'c_tomada_decisao_recursos', name: 'Alocação de Recursos', isPrerequisite: false },
+        ],
+        edges: [
+          { from: 'c_racionalidade_limitada', to: 'c_limitacoes_cognitivas_informacao', label: 'gera custo de busca', relationType: 'causes' },
+          { from: 'c_limitacoes_cognitivas_informacao', to: 'c_satisficing_aspiracao', label: 'impõe satisficing', relationType: 'causes' },
+          { from: 'c_satisficing_aspiracao', to: 'c_busca_heuristica', label: 'interrompe busca', relationType: 'regulates' },
+          { from: 'c_racionalidade_limitada', to: 'c_mecanismos_organizacionais', label: 'exige estrutura', relationType: 'causes' },
+          { from: 'c_mecanismos_organizacionais', to: 'c_tomada_decisao_recursos', label: 'padroniza escolha', relationType: 'regulates' },
+        ],
+      },
+      identifiedGaps: [
+        'O texto introdutório não aborda a modelagem formal de teoria dos jogos para equilíbrios imperfeitos nem modelos bayesianos avançados de atualização de crenças sob assimetria.',
+      ],
+      suggestedDiagramType: 'process-flow',
+      analyzedAt: 1730000610000,
     },
   },
 ];

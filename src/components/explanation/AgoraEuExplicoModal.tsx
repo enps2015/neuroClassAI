@@ -27,6 +27,7 @@ import type {
   EvidenceReference,
 } from '../../types';
 import { requestConceptQuestion, requestExplanationEvaluation } from '../../services/ai/aiClient';
+import { workspaceStorage } from '../../services/storage/workspaceStorage';
 import {
   saveLearningAttempt,
   getAttemptsByConcept,
@@ -42,6 +43,7 @@ import {
   formatAttemptsCount,
   verifyEvidenceCorrespondence,
 } from '../../utils/pedagogicalLabels';
+import { FeatureHelp } from '../onboarding/FeatureHelp';
 
 interface AgoraEuExplicoModalProps {
   isOpen: boolean;
@@ -51,6 +53,7 @@ interface AgoraEuExplicoModalProps {
   allConcepts: Concept[];
   documentExcerpts?: string[];
   onConceptStateChanged?: (conceptId: string, newState: DiagnosticState) => void;
+  onOpenGuide?: () => void;
 }
 
 export const AgoraEuExplicoModal: React.FC<AgoraEuExplicoModalProps> = ({
@@ -61,6 +64,7 @@ export const AgoraEuExplicoModal: React.FC<AgoraEuExplicoModalProps> = ({
   allConcepts,
   documentExcerpts = [],
   onConceptStateChanged,
+  onOpenGuide,
 }) => {
   const [selectedConcept, setSelectedConcept] = useState<Concept | null>(activeConcept);
   const [question, setQuestion] = useState<string>('');
@@ -230,10 +234,10 @@ export const AgoraEuExplicoModal: React.FC<AgoraEuExplicoModalProps> = ({
         mastery || undefined
       );
 
-      // Persistir no IndexedDB
+      // Persistir no repositório Local-First (pasta física e IndexedDB)
       await Promise.all([
-        saveLearningAttempt(newAttempt),
-        saveConceptMastery(updatedMastery),
+        workspaceStorage.saveLearningAttempt(newAttempt, document.subject || 'Geral'),
+        workspaceStorage.saveLearningProgress(updatedMastery, undefined, document.subject || 'Geral'),
       ]);
 
       setAttempts(allAttemptsForConcept);
@@ -282,6 +286,7 @@ export const AgoraEuExplicoModal: React.FC<AgoraEuExplicoModalProps> = ({
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   Técnica de Feynman / C.R.E.A.R.
                 </span>
+                <FeatureHelp featureKey="agora_eu_explico" onOpenFullGuide={onOpenGuide} buttonSize="xs" />
               </div>
               <p className="text-xs text-slate-400">
                 Explique o conceito com suas próprias palavras para avaliar sua precisão, coerência e profundidade.

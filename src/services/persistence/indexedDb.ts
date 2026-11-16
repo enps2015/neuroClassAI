@@ -8,7 +8,9 @@ import type {
   LearningAttempt,
   ConceptMastery,
   ConceptReviewSchedule,
+  VisualResource,
 } from '../../types';
+import type { StoredDocumentChunk, StoredLexicalIndex, StoredOcrPage, StoredDenseEmbedding, DenseIndexMetadata } from '../../types/rag';
 
 interface NeuroClassDB extends DBSchema {
   documents: {
@@ -69,10 +71,59 @@ interface NeuroClassDB extends DBSchema {
       'by-due': string;
     };
   };
+  /* Missão Visual Learning v1: Biblioteca de Recursos Visuais Didáticos */
+  visual_resources: {
+    key: string; // id
+    value: VisualResource;
+    indexes: {
+      'by-document': string;
+      'by-concept': string;
+      'by-created': number;
+    };
+  };
+  /* Fase A2: Chunks Estruturados RAG e Persistência Local */
+  document_chunks: {
+    key: string; // chunkId
+    value: StoredDocumentChunk;
+    indexes: {
+      'by-document': string;
+      'by-content-hash': string;
+    };
+  };
+  /* Fase B1: Índice Invertido e Estatísticas BM25 Local-First */
+  rag_lexical_index: {
+    key: string; // documentId
+    value: StoredLexicalIndex;
+    indexes: {
+      'by-document': string;
+    };
+  };
+  /* Fase C1: Páginas Processadas por OCR Local */
+  document_ocr_pages: {
+    key: string; // `${documentId}_p${pageNumber}`
+    value: StoredOcrPage;
+    indexes: {
+      'by-document': string;
+      'by-status': string;
+    };
+  };
+  /* Fase F1: Embeddings Densos Locais e Metadados de Índice Semântico */
+  document_dense_embeddings: {
+    key: string; // chunkId
+    value: StoredDenseEmbedding;
+    indexes: {
+      'by-document': string;
+      'by-model-version': string;
+    };
+  };
+  rag_dense_index_metadata: {
+    key: string; // documentId
+    value: DenseIndexMetadata;
+  };
 }
 
 const DB_NAME = 'neuroclass_ai_db';
-const DB_VERSION = 3; // Evolução de schema v2 -> v3 (Marco 2D: FSRS-7)
+const DB_VERSION = 8; // Evolução de schema v7 -> v8 (Fase F1: document_dense_embeddings e rag_dense_index_metadata)
 
 let dbPromise: Promise<IDBPDatabase<NeuroClassDB>> | null = null;
 
@@ -88,27 +139,45 @@ function getInMemStore(storeName: string): Map<string, any> {
 const inMemoryMockDb: any = {
   put: async (store: string, value: any) => {
     const s = getInMemStore(store);
-    const key = value.id || value.documentId || value.key;
-    s.set(key, JSON.parse(JSON.stringify(value)));
+    const key = value.chunkId || value.id || value.documentId || value.key;
+    if (store === 'file_blobs') {
+      s.set(key, { ...value });
+    } else {
+      s.set(key, JSON.parse(JSON.stringify(value)));
+    }
   },
   get: async (store: string, key: string) => {
     const s = getInMemStore(store);
     const val = s.get(key);
-    return val ? JSON.parse(JSON.stringify(val)) : undefined;
+    if (!val) return undefined;
+    if (store === 'file_blobs') {
+      return { ...val };
+    }
+    return JSON.parse(JSON.stringify(val));
   },
   delete: async (store: string, key: string) => {
     const s = getInMemStore(store);
     s.delete(key);
   },
+  clear: async (store: string) => {
+    const s = getInMemStore(store);
+    s.clear();
+  },
   getAll: async (store: string) => {
     const s = getInMemStore(store);
+    if (store === 'file_blobs') {
+      return Array.from(s.values()).map(v => ({ ...v }));
+    }
     return Array.from(s.values()).map(v => JSON.parse(JSON.stringify(v)));
   },
   getAllFromIndex: async (store: string, index: string, queryKey: any) => {
     const s = getInMemStore(store);
     const all = Array.from(s.values());
     if (index === 'by-document') {
-      return all.filter(item => item.documentId === queryKey).map(v => JSON.parse(JSON.stringify(v)));
+      return all.filter(item => item.documentId === queryKey || item.docId === queryKey).map(v => JSON.parse(JSON.stringify(v)));
+    }
+    if (index === 'by-content-hash') {
+      return all.filter(item => item.contentHash === queryKey).map(v => JSON.parse(JSON.stringify(v)));
     }
     if (index === 'by-concept') {
       return all.filter(item => item.conceptId === queryKey).map(v => JSON.parse(JSON.stringify(v)));
@@ -119,16 +188,39 @@ const inMemoryMockDb: any = {
     if (index === 'by-diagnostic-state') {
       return all.filter(item => item.diagnosticState === queryKey).map(v => JSON.parse(JSON.stringify(v)));
     }
+    if (index === 'by-model-version') {
+      return all.filter(item => item.modelVersion === queryKey).map(v => JSON.parse(JSON.stringify(v)));
+    }
     return all.map(v => JSON.parse(JSON.stringify(v)));
+  },
+  getFromIndex: async (store: string, index: string, queryKey: any) => {
+    const s = getInMemStore(store);
+    const all = Array.from(s.values());
+    if (index === 'by-document') {
+      const match = all.find(item => item.documentId === queryKey || item.docId === queryKey);
+      return match ? JSON.parse(JSON.stringify(match)) : undefined;
+    }
+    if (index === 'by-content-hash') {
+      const match = all.find(item => item.contentHash === queryKey);
+      return match ? JSON.parse(JSON.stringify(match)) : undefined;
+    }
+    if (index === 'by-concept') {
+      const match = all.find(item => item.conceptId === queryKey);
+      return match ? JSON.parse(JSON.stringify(match)) : undefined;
+    }
+    const match = all.find((item: any) => item[index] === queryKey);
+    return match ? JSON.parse(JSON.stringify(match)) : undefined;
   },
   transaction: (stores: string[], mode: string) => ({
     objectStore: (store: string) => ({
       get: async (key: string) => inMemoryMockDb.get(store, key),
+      put: async (val: any) => inMemoryMockDb.put(store, val),
       delete: async (key: string) => inMemoryMockDb.delete(store, key),
+      clear: async () => inMemoryMockDb.clear(store),
       index: (indexName: string) => ({
         getAllKeys: async (queryKey: any) => {
           const items = await inMemoryMockDb.getAllFromIndex(store, indexName, queryKey);
-          return items.map((i: any) => i.id || i.documentId);
+          return items.map((i: any) => i.chunkId || i.id || i.documentId);
         },
       }),
     }),
@@ -202,6 +294,56 @@ export async function getDB(): Promise<IDBPDatabase<NeuroClassDB>> {
             scheduleStore.createIndex('by-due', 'nextReviewDue');
           }
         }
+
+        // v4 Store (Missão Visual Learning v1: Recursos Visuais Didáticos)
+        if (oldVersion < 4 || !db.objectStoreNames.contains('visual_resources')) {
+          if (!db.objectStoreNames.contains('visual_resources')) {
+            const visualStore = db.createObjectStore('visual_resources', { keyPath: 'id' });
+            visualStore.createIndex('by-document', 'documentId');
+            visualStore.createIndex('by-concept', 'conceptId');
+            visualStore.createIndex('by-created', 'createdAt');
+          }
+        }
+
+        // v5 Store (Fase A2: Chunks Estruturados RAG e Persistência Local)
+        if (oldVersion < 5 || !db.objectStoreNames.contains('document_chunks')) {
+          if (!db.objectStoreNames.contains('document_chunks')) {
+            const chunkStore = db.createObjectStore('document_chunks', { keyPath: 'chunkId' });
+            chunkStore.createIndex('by-document', 'documentId');
+            chunkStore.createIndex('by-content-hash', 'contentHash');
+          }
+        }
+
+        // v6 Store (Fase B1: Índice Invertido e Estatísticas BM25)
+        if (oldVersion < 6 || !db.objectStoreNames.contains('rag_lexical_index')) {
+          if (!db.objectStoreNames.contains('rag_lexical_index')) {
+            const lexStore = db.createObjectStore('rag_lexical_index', { keyPath: 'documentId' });
+            lexStore.createIndex('by-document', 'documentId');
+          }
+        }
+
+        // v7 Store (Fase C1: Páginas Processadas por OCR Local)
+        if (oldVersion < 7 || !db.objectStoreNames.contains('document_ocr_pages')) {
+          if (!db.objectStoreNames.contains('document_ocr_pages')) {
+            const ocrStore = db.createObjectStore('document_ocr_pages', { keyPath: 'id' });
+            ocrStore.createIndex('by-document', 'documentId');
+            ocrStore.createIndex('by-status', 'status');
+          }
+        }
+
+        // v8 Stores (Fase F1: Embeddings Densos Locais e Metadados Semânticos)
+        if (oldVersion < 8 || !db.objectStoreNames.contains('document_dense_embeddings')) {
+          if (!db.objectStoreNames.contains('document_dense_embeddings')) {
+            const denseStore = db.createObjectStore('document_dense_embeddings', { keyPath: 'chunkId' });
+            denseStore.createIndex('by-document', 'documentId');
+            denseStore.createIndex('by-model-version', 'modelVersion');
+          }
+        }
+        if (oldVersion < 8 || !db.objectStoreNames.contains('rag_dense_index_metadata')) {
+          if (!db.objectStoreNames.contains('rag_dense_index_metadata')) {
+            db.createObjectStore('rag_dense_index_metadata', { keyPath: 'documentId' });
+          }
+        }
       },
     });
   }
@@ -270,7 +412,22 @@ export async function saveDocument(
         size: doc.sizeBytes,
       });
     }
-    await tx.objectStore('documents').put(doc);
+
+    // Não persistir buffers voláteis de imagem (pageImageBase64) no armazenamento persistente
+    // Imagens de páginas são transitórias para requisições do Gemini e não devem inflar o IndexedDB
+    let docToPersist = doc;
+    if (doc.pages && Array.isArray(doc.pages)) {
+      const sanitizedPages = doc.pages.map(p => {
+        if (p && p.pageImageBase64) {
+          const { pageImageBase64: _removed, ...rest } = p;
+          return rest;
+        }
+        return p;
+      });
+      docToPersist = { ...doc, pages: sanitizedPages };
+    }
+
+    await tx.objectStore('documents').put(docToPersist);
     await tx.done;
     return { success: true, storageOptimized };
   } catch (error) {
@@ -357,6 +514,12 @@ export async function getAttemptsBySession(sessionId: string): Promise<LearningA
   return attempts.sort((a, b) => a.createdAt - b.createdAt);
 }
 
+export async function getAttemptsByDocument(documentId: string): Promise<LearningAttempt[]> {
+  const db = await getDB();
+  const attempts = await db.getAllFromIndex('learning_attempts', 'by-document', documentId);
+  return attempts.sort((a, b) => a.createdAt - b.createdAt);
+}
+
 export function buildMasteryKey(documentId: string, conceptId: string): string {
   return `${documentId}#${conceptId}`;
 }
@@ -369,7 +532,11 @@ export async function getConceptMastery(documentId: string, conceptId: string): 
 
 export async function saveConceptMastery(mastery: ConceptMastery): Promise<void> {
   const db = await getDB();
-  await db.put('concept_mastery', mastery);
+  const masteryToSave = {
+    ...mastery,
+    id: buildMasteryKey(mastery.documentId, mastery.conceptId),
+  };
+  await db.put('concept_mastery', masteryToSave);
 }
 
 export async function getAllMasteryByDocument(documentId: string): Promise<ConceptMastery[]> {
@@ -410,6 +577,12 @@ export async function deleteDocumentCompletely(documentId: string): Promise<void
       'learning_attempts',
       'concept_mastery',
       'review_schedules',
+      'visual_resources',
+      'document_chunks',
+      'rag_lexical_index',
+      'document_ocr_pages',
+      'document_dense_embeddings',
+      'rag_dense_index_metadata',
     ],
     'readwrite'
   );
@@ -466,7 +639,85 @@ export async function deleteDocumentCompletely(documentId: string): Promise<void
     await scheduleStore.delete(key);
   }
 
+  // Limpar recursos visuais associados ao documento (Missão Visual Learning v1)
+  const visualStore = tx.objectStore('visual_resources');
+  const visualKeys = await visualStore.index('by-document').getAllKeys(documentId);
+  for (const key of visualKeys) {
+    await visualStore.delete(key);
+  }
+
+  // Limpar chunks estruturados RAG associados ao documento (Fase A2)
+  const chunkStore = tx.objectStore('document_chunks');
+  const chunkKeys = await chunkStore.index('by-document').getAllKeys(documentId);
+  for (const key of chunkKeys) {
+    await chunkStore.delete(key);
+  }
+
+  // Limpar índice lexical invertido BM25 (Fase B1)
+  const lexicalStore = tx.objectStore('rag_lexical_index');
+  await lexicalStore.delete(documentId);
+
+  // Limpar páginas OCR associadas ao documento (Fase C1)
+  const ocrStore = tx.objectStore('document_ocr_pages');
+  const ocrKeys = await ocrStore.index('by-document').getAllKeys(documentId);
+  for (const key of ocrKeys) {
+    await ocrStore.delete(key);
+  }
+
+  // Limpar embeddings densos associados ao documento (Fase F1)
+  const denseStore = tx.objectStore('document_dense_embeddings');
+  const denseKeys = await denseStore.index('by-document').getAllKeys(documentId);
+  for (const key of denseKeys) {
+    await denseStore.delete(key);
+  }
+
+  // Limpar metadados de índice denso (Fase F1)
+  const denseMetaStore = tx.objectStore('rag_dense_index_metadata');
+  await denseMetaStore.delete(documentId);
+
   await tx.done;
+}
+
+/**
+ * Persiste recurso visual didático gerado explicitamente pelo estudante (Visual Learning v1).
+ */
+export async function saveVisualResource(resource: VisualResource): Promise<void> {
+  const db = await getDB();
+  await db.put('visual_resources', resource);
+}
+
+/**
+ * Obtém todos os recursos visuais didáticos de um documento.
+ */
+export async function getVisualResourcesByDocument(documentId: string): Promise<VisualResource[]> {
+  const db = await getDB();
+  const list = await db.getAllFromIndex('visual_resources', 'by-document', documentId);
+  return list.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/**
+ * Obtém todos os recursos visuais didáticos associados a um conceito específico.
+ */
+export async function getVisualResourcesByConcept(conceptId: string): Promise<VisualResource[]> {
+  const db = await getDB();
+  const list = await db.getAllFromIndex('visual_resources', 'by-concept', conceptId);
+  return list.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/**
+ * Obtém um recurso visual específico pelo seu identificador único.
+ */
+export async function getVisualResourceById(id: string): Promise<VisualResource | undefined> {
+  const db = await getDB();
+  return db.get('visual_resources', id);
+}
+
+/**
+ * Remove um recurso visual da biblioteca local.
+ */
+export async function deleteVisualResource(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('visual_resources', id);
 }
 
 /**
@@ -522,18 +773,36 @@ export async function exportUserDataAsJson(): Promise<string> {
   const mastery = await db.getAll('concept_mastery');
   const sessions = await db.getAll('learning_sessions');
   const schedules = await db.getAll('review_schedules');
+  const visualResources = await db.getAll('visual_resources');
 
   const exportPayload = {
     exportedAt: new Date().toISOString(),
-    version: '2.4',
+    version: '2.5',
     data: {
-      documents: documents.filter(d => !d.isDemoMaterial),
+      documents: documents
+        .filter(d => !d.isDemoMaterial)
+        .map(d => {
+          if (d.pages && Array.isArray(d.pages)) {
+            return {
+              ...d,
+              pages: d.pages.map(p => {
+                if (p && p.pageImageBase64) {
+                  const { pageImageBase64: _removed, ...rest } = p;
+                  return rest;
+                }
+                return p;
+              }),
+            };
+          }
+          return d;
+        }),
       analyses,
       notes,
       learningAttempts: attempts,
       conceptMastery: mastery,
       learningSessions: sessions,
       reviewSchedules: schedules,
+      visualResources,
     },
   };
   return JSON.stringify(exportPayload, null, 2);
@@ -551,6 +820,7 @@ export async function restoreUserDataFromJson(jsonString: string): Promise<{
   masteryCount: number;
   sessionsCount: number;
   schedulesCount: number;
+  visualResourcesCount: number;
 }> {
   const payload = JSON.parse(jsonString);
   const data = payload?.data;
@@ -561,7 +831,18 @@ export async function restoreUserDataFromJson(jsonString: string): Promise<{
   let documentsCount = 0;
   if (Array.isArray(data.documents)) {
     for (const doc of data.documents) {
-      await db.put('documents', doc);
+      let docToPersist = doc;
+      if (doc && doc.pages && Array.isArray(doc.pages)) {
+        const sanitizedPages = doc.pages.map((p: any) => {
+          if (p && p.pageImageBase64) {
+            const { pageImageBase64: _removed, ...rest } = p;
+            return rest;
+          }
+          return p;
+        });
+        docToPersist = { ...doc, pages: sanitizedPages };
+      }
+      await db.put('documents', docToPersist);
       documentsCount++;
     }
   }
@@ -614,6 +895,14 @@ export async function restoreUserDataFromJson(jsonString: string): Promise<{
     }
   }
 
+  let visualResourcesCount = 0;
+  if (Array.isArray(data.visualResources)) {
+    for (const res of data.visualResources) {
+      await db.put('visual_resources', res);
+      visualResourcesCount++;
+    }
+  }
+
   return {
     documentsCount,
     analysesCount,
@@ -622,5 +911,36 @@ export async function restoreUserDataFromJson(jsonString: string): Promise<{
     masteryCount,
     sessionsCount,
     schedulesCount,
+    visualResourcesCount,
   };
+}
+
+/**
+ * Limpa todos os dados locais do usuário de todos os 10 stores do IndexedDB.
+ * Restaura o banco de dados local ao estado inicial limpo (Factory Reset local completo).
+ * Remove todos os arquivos carregados (PDFs, notas), análises, sessões, agendamentos e recursos visuais.
+ */
+export async function clearAllUserData(): Promise<void> {
+  const db = await getDB();
+  const storeNames = [
+    'documents',
+    'analyses',
+    'notes',
+    'chat_sessions',
+    'file_blobs',
+    'learning_sessions',
+    'learning_attempts',
+    'concept_mastery',
+    'review_schedules',
+    'visual_resources',
+    'document_chunks',
+    'rag_lexical_index',
+    'document_ocr_pages',
+  ] as const;
+
+  const tx = db.transaction(storeNames as any, 'readwrite');
+  for (const storeName of storeNames) {
+    await tx.objectStore(storeName as any).clear();
+  }
+  await tx.done;
 }

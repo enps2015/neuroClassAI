@@ -5,7 +5,7 @@ import { AIServiceHealth, CircuitBreakerOpenError } from '../services/ai/aiHealt
 import { safeBufferToBase64 } from '../services/documents/pdfService.ts';
 
 test('T01 & T05: Catálogo de demonstração possui evidências estritas e multirrreferências reais', () => {
-  assert.equal(DEMO_MATERIALS.length, 2, 'Devem existir exatamente 2 materiais científicos demonstrativos');
+  assert.equal(DEMO_MATERIALS.length, 7, 'Devem existir exatamente 7 materiais científicos demonstrativos das 7 áreas acadêmicas');
 
   const neuroDoc = DEMO_MATERIALS[0];
   assert.equal(neuroDoc.document.subject, 'Neurociência e Fisiologia Celular');

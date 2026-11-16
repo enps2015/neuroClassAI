@@ -38,6 +38,7 @@ import {
   FSRS_ALGORITHM_VERSION,
 } from '../../services/learning/spacedRepetitionService';
 import {
+  getConceptMastery,
   getReviewSchedule,
   getReviewSchedulesByDocument,
   getAllMasteryByDocument,
@@ -45,9 +46,11 @@ import {
   saveLearningSession,
   getAttemptsByConcept,
 } from '../../services/persistence/indexedDb';
+import { workspaceStorage } from '../../services/storage/workspaceStorage';
 import { requestConceptQuestion, requestExplanationEvaluation } from '../../services/ai/aiClient';
 import { getMasteryLevelMeta, getDiagnosticStateMeta } from '../../utils/pedagogicalLabels';
 import { LongitudinalReviewDashboard } from './LongitudinalReviewDashboard';
+import { FeatureHelp } from '../onboarding/FeatureHelp';
 
 interface SpacedReviewModalProps {
   isOpen: boolean;
@@ -56,6 +59,7 @@ interface SpacedReviewModalProps {
   concepts: Concept[];
   initialConceptId?: string | null;
   onConceptMasteryChanged?: (conceptId: string, updatedMastery: ConceptMastery) => void;
+  onOpenGuide?: () => void;
 }
 
 type FilterTab = 'all' | 'overdue' | 'due_today' | 'upcoming' | 'untracked';
@@ -67,6 +71,7 @@ export const SpacedReviewModal: React.FC<SpacedReviewModalProps> = ({
   concepts,
   initialConceptId,
   onConceptMasteryChanged,
+  onOpenGuide,
 }) => {
   const [activeTab, setActiveTab] = useState<'queue' | 'analytics'>('queue');
   const [filter, setFilter] = useState<FilterTab>('all');
@@ -254,7 +259,7 @@ export const SpacedReviewModal: React.FC<SpacedReviewModalProps> = ({
         reviewRating: fsrsMapping.grade,
         confidenceDeclared: confidence,
       };
-      await saveLearningAttempt(reviewAttempt);
+      await workspaceStorage.saveLearningAttempt(reviewAttempt, document.subject || 'Geral');
 
       // Processar com FSRS-7
       const { updatedSchedule, reviewLog } = await processConceptReview({
@@ -267,6 +272,12 @@ export const SpacedReviewModal: React.FC<SpacedReviewModalProps> = ({
         confidenceDeclared: confidence,
         pedagogicalRationale: fsrsMapping.rationale,
       });
+
+      // Sincroniza progresso FSRS-7 na pasta física e no IndexedDB
+      const currentMastery = await getConceptMastery(document.id, reviewingConcept.id);
+      if (currentMastery) {
+        await workspaceStorage.saveLearningProgress(currentMastery, updatedSchedule, document.subject || 'Geral');
+      }
 
       setLatestLog(reviewLog);
 
@@ -322,6 +333,7 @@ export const SpacedReviewModal: React.FC<SpacedReviewModalProps> = ({
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">
                   {FSRS_ALGORITHM}
                 </span>
+                <FeatureHelp featureKey="spaced_repetition" onOpenFullGuide={onOpenGuide} buttonSize="xs" />
               </div>
               <p className="text-xs text-slate-400">
                 Evocação ativa sem consulta para consolidação duradoura na memória de longo prazo.
